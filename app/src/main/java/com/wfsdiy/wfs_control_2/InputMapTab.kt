@@ -3,6 +3,7 @@ package com.wfsdiy.wfs_control_2
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -16,6 +17,9 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlin.math.floor
 
 // Assuming drawMarker is in MapElements.kt or accessible
@@ -100,7 +104,16 @@ fun InputMapTab(
     val context = LocalContext.current
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() }
     val currentMarkersState by rememberUpdatedState(markers)
-    val markerRadius = 20f.dpToPx() // This .dpToPx() is okay as InputMapTab is @Composable
+    
+    // Calculate responsive marker radius
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenDensity = density.density
+    
+    val baseMarkerRadius = (screenWidthDp.value / 40f).coerceIn(7.5f, 17.5f) // 7.5-17.5dp range (half size)
+    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(7.5f, 17.5f)
+    val markerRadius = responsiveMarkerRadius.dpToPx()
 
     val textPaint = remember {
         Paint().apply {
@@ -115,15 +128,25 @@ fun InputMapTab(
         val canvasHeight = constraints.maxHeight.toFloat()
         val pickupRadiusMultiplier = 1.25f
 
+        // Update shared canvas dimensions and call onCanvasSizeChanged
         LaunchedEffect(canvasWidth, canvasHeight) {
-            onCanvasSizeChanged(canvasWidth, canvasHeight)
+            if (canvasWidth > 0f && canvasHeight > 0f) {
+                Log.d("CANVAS_DIMENSIONS", "InputMapTab updating shared canvas dimensions: ${canvasWidth}x${canvasHeight}")
+                CanvasDimensions.updateDimensions(canvasWidth, canvasHeight)
+                onCanvasSizeChanged(canvasWidth, canvasHeight)
+            } else {
+                Log.d("CANVAS_DIMENSIONS", "InputMapTab canvas dimensions still zero: ${canvasWidth}x${canvasHeight}")
+            }
         }
 
         LaunchedEffect(canvasWidth, canvasHeight, initialLayoutDone, numberOfInputs) {
             if (canvasWidth > 0f && canvasHeight > 0f && !initialLayoutDone && numberOfInputs > 0) {
                 val numCols = 8
                 val numRows = (numberOfInputs + numCols - 1) / numCols
-                val spacingFactor = 150f // Or calculate dynamically
+                
+                // Calculate responsive spacing factor based on screen size
+                val baseSpacingFactor = (screenWidthDp.value / 4f).coerceIn(60f, 100f) // 60-100dp range (more compact)
+                val spacingFactor = baseSpacingFactor
 
                 val contentWidthOfCenters = (numCols - 1) * spacingFactor
                 val contentHeightOfCenters = (numRows - 1) * spacingFactor
@@ -144,10 +167,10 @@ fun InputMapTab(
                         val xPos = centeredStartX + logicalCol * spacingFactor
                         val yPos = centeredStartY + logicalRow * spacingFactor
 
-                        marker.copy(position = Offset(
-                            xPos.coerceIn(marker.radius, canvasWidth - marker.radius),
-                            yPos.coerceIn(marker.radius, canvasHeight - marker.radius)
-                        ))
+                        marker.copy(
+                            positionX = xPos.coerceIn(marker.radius, canvasWidth - marker.radius),
+                            positionY = yPos.coerceIn(marker.radius, canvasHeight - marker.radius)
+                        )
                     } else {
                         // For markers beyond numberOfInputs, return them unchanged
                         marker
@@ -157,7 +180,7 @@ fun InputMapTab(
                 onInitialLayoutDone()
             } else if (numberOfInputs == 0 && !initialLayoutDone) {
                 // If numberOfInputs is 0, reset positions
-                val resetMarkersList = currentMarkersState.map { it.copy(position = Offset(0f,0f)) } 
+                val resetMarkersList = currentMarkersState.map { it.copy(positionX = 0f, positionY = 0f) } 
                 onMarkersInitiallyPositioned(resetMarkersList)
                 onInitialLayoutDone()
             }
@@ -165,7 +188,7 @@ fun InputMapTab(
 
         Canvas(modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(stageWidth, stageDepth) {
                 awaitEachGesture {
                     val pointerIdToCurrentLogicalPosition = mutableMapOf<PointerId, Offset>()
                     val pointersThatAttemptedGrab = mutableSetOf<PointerId>()
@@ -227,7 +250,7 @@ fun InputMapTab(
                                                     )
                                                     pointerIdToCurrentLogicalPosition[pointerId] = newLogicalPosition
                                                     
-                                                    val updatedMarker = markerToMove.copy(position = newLogicalPosition)
+                                                    val updatedMarker = markerToMove.copy(positionX = newLogicalPosition.x, positionY = newLogicalPosition.y)
                                                     
                                                     // Update WFSControlApp by creating a new full list
                                                     val newFullListForWFS = currentMarkersState.toMutableList()
@@ -235,7 +258,7 @@ fun InputMapTab(
                                                     onMarkersInitiallyPositioned(newFullListForWFS.toList()) // Update WFSControlApp
 
                                                     if (initialLayoutDone) {
-                                                        sendOscPosition(context, updatedMarker.id, updatedMarker.position.x, updatedMarker.position.y, canvasWidth, canvasHeight, false)
+                                                        sendOscPosition(context, updatedMarker.id, updatedMarker.position.x, updatedMarker.position.y, false)
                                                     }
                                                     change.consume()
                                                 }
@@ -250,7 +273,7 @@ fun InputMapTab(
                                     // OSC for released marker (use its final position from currentMarkersState)
                                     val finalMarkerState = currentMarkersState.find { it.id == releasedMarkerId }
                                     if (finalMarkerState != null && !finalMarkerState.isLocked && initialLayoutDone) {
-                                        sendOscPosition(context, finalMarkerState.id, finalMarkerState.position.x, finalMarkerState.position.y, canvasWidth, canvasHeight, false)
+                                        sendOscPosition(context, finalMarkerState.id, finalMarkerState.position.x, finalMarkerState.position.y, false)
                                     }
                                 }
                                 pointersThatAttemptedGrab.remove(pointerId)

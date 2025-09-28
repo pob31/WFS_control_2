@@ -3,6 +3,7 @@ package com.wfsdiy.wfs_control_2
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import android.graphics.Typeface
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -20,6 +21,9 @@ import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.dp
 import kotlin.collections.set
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
@@ -31,13 +35,26 @@ fun ClusterMapTab(
     initialLayoutDone: Boolean,
     onInitialLayoutDone: () -> Unit,
     stageWidth: Float,
-    stageDepth: Float
+    stageDepth: Float,
+    viewModel: MainActivityViewModel? = null
 ) {
+    Log.d("CLUSTER_TAB", "ClusterMapTab rendered with ${clusterMarkers.size} markers")
+    clusterMarkers.forEach { marker ->
+        Log.d("CLUSTER_TAB", "Rendered marker ${marker.id}: position (${marker.positionX}, ${marker.positionY})")
+    }
     val context = LocalContext.current
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() } // <Pointer.id.value, ClusterMarker.id>
     val currentMarkersState by rememberUpdatedState(clusterMarkers)
     val currentOnMarkersChanged by rememberUpdatedState(onClusterMarkersChanged)
-    val markerRadius = 20f.dpToPx()
+    // Calculate responsive marker radius
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenDensity = density.density
+    
+    val baseMarkerRadius = (screenWidthDp.value / 40f).coerceIn(7.5f, 17.5f) // 7.5-17.5dp range (half size)
+    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(7.5f, 17.5f)
+    val markerRadius = responsiveMarkerRadius.dpToPx()
 
     val textPaint = remember {
         Paint().apply {
@@ -51,15 +68,25 @@ fun ClusterMapTab(
         val canvasHeight = constraints.maxHeight.toFloat()
         val pickupRadiusMultiplier = 1.25f
 
+        // Update shared canvas dimensions and call onCanvasSizeChanged
         LaunchedEffect(canvasWidth, canvasHeight) {
-            onCanvasSizeChanged(canvasWidth, canvasHeight)
+            if (canvasWidth > 0f && canvasHeight > 0f) {
+                Log.d("CANVAS_DIMENSIONS", "ClusterMapTab updating shared canvas dimensions: ${canvasWidth}x${canvasHeight}")
+                CanvasDimensions.updateDimensions(canvasWidth, canvasHeight)
+                onCanvasSizeChanged(canvasWidth, canvasHeight)
+            } else {
+                Log.d("CANVAS_DIMENSIONS", "ClusterMapTab canvas dimensions still zero: ${canvasWidth}x${canvasHeight}")
+            }
         }
 
         LaunchedEffect(canvasWidth, canvasHeight, initialLayoutDone) {
             if (canvasWidth > 0f && canvasHeight > 0f && !initialLayoutDone) {
                 val numCols = 5
                 val numRows = 2
-                val spacingFactor = 180f
+                
+                // Calculate responsive spacing factor based on screen size
+                val baseSpacingFactor = (screenWidthDp.value / 3.5f).coerceIn(80f, 120f) // 80-120dp range (more compact)
+                val spacingFactor = baseSpacingFactor
 
                 val contentWidthOfCenters = (numCols - 1) * spacingFactor
                 val contentHeightOfCenters = (numRows - 1) * spacingFactor
@@ -79,10 +106,10 @@ fun ClusterMapTab(
                     val xPos = centeredStartX + logicalCol * spacingFactor
                     val yPos = centeredStartY + logicalRow * spacingFactor
 
-                    clusterMarker.copy(position = Offset(
-                        xPos.coerceIn(clusterMarker.radius, canvasWidth - clusterMarker.radius),
-                        yPos.coerceIn(clusterMarker.radius, canvasHeight - clusterMarker.radius)
-                    ))
+                    clusterMarker.copy(
+                        positionX = xPos.coerceIn(clusterMarker.radius, canvasWidth - clusterMarker.radius),
+                        positionY = yPos.coerceIn(clusterMarker.radius, canvasHeight - clusterMarker.radius)
+                    )
                 }
                 currentOnMarkersChanged(updatedMarkers)
                 onInitialLayoutDone()
@@ -91,7 +118,7 @@ fun ClusterMapTab(
 
         Canvas(modifier = Modifier
             .fillMaxSize()
-            .pointerInput(Unit) {
+            .pointerInput(stageWidth, stageDepth) {
                 awaitEachGesture {
                     val pointerIdToCurrentLogicalPosition = mutableMapOf<PointerId, Offset>()
                     val pointersThatAttemptedGrab = mutableSetOf<PointerId>()
@@ -160,7 +187,7 @@ fun ClusterMapTab(
                                                 pointerIdToCurrentLogicalPosition[pointerId] =
                                                     newLogicalPosition
                                                 val updatedMarker =
-                                                    markerToMove.copy(position = newLogicalPosition)
+                                                    markerToMove.copy(positionX = newLogicalPosition.x, positionY = newLogicalPosition.y)
                                                 nextMarkersList[markerIndex] = updatedMarker
                                                 positionsChangedInThisEvent = true
                                                 if (initialLayoutDone) {
@@ -169,8 +196,6 @@ fun ClusterMapTab(
                                                         updatedMarker.id,
                                                         updatedMarker.position.x,
                                                         updatedMarker.position.y,
-                                                        canvasWidth,
-                                                        canvasHeight,
                                                         true
                                                     )
                                                 }
@@ -192,8 +217,6 @@ fun ClusterMapTab(
                                                 markerForOsc.id,
                                                 markerForOsc.position.x,
                                                 markerForOsc.position.y,
-                                                canvasWidth,
-                                                canvasHeight,
                                                 true
                                             )
                                         }
@@ -215,6 +238,7 @@ fun ClusterMapTab(
         ) {
             drawRect(Color.Black)
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight)
+            drawStageCornerLabels(stageWidth, stageDepth, canvasWidth, canvasHeight)
             currentMarkersState.sortedByDescending { it.id }.forEach { clusterMarker ->
                 drawMarker(clusterMarker, draggingMarkers.containsValue(clusterMarker.id), textPaint, true, stageWidth, stageDepth, canvasWidth, canvasHeight)
             }

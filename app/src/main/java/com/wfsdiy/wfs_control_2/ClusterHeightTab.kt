@@ -102,7 +102,7 @@ fun ClusterHeightTab(
                         }
                     }
 
-                    val dynamicTrackThickness = (this@BoxWithConstraints.maxWidth.value / 2f).dp.coerceAtLeast(4.dp)
+                    val dynamicTrackThickness = (this@BoxWithConstraints.maxWidth / 2f).coerceAtLeast(4.dp)
                     // Define track colors based on the clusterBaseColor
                     val activeTrackCustomColor = clusterBaseColor.copy(alpha = 0.75f) // Slightly more vibrant active part
                     val inactiveTrackCustomColor = clusterBaseColor.copy(alpha = 0.3f) // Lighter/dimmer inactive part

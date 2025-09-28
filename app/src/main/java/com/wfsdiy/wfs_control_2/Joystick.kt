@@ -14,6 +14,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
@@ -27,17 +28,25 @@ import kotlin.math.sqrt
 @Composable
 fun Joystick(
     modifier: Modifier = Modifier,
-    joystickSize: Dp = 150.dp,
+    joystickSize: Dp? = null,
     outerCircleColor: Color = Color.LightGray,
     innerThumbColor: Color = Color.DarkGray,
     onPositionChanged: (x: Float, y: Float) -> Unit
 ) {
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenDensity = density.density
+    
+    // Calculate responsive joystick size
+    val baseJoystickSize = (screenWidthDp.value / 2.5f).coerceIn(120f, 200f) // 120-200dp range
+    val responsiveJoystickSize = (baseJoystickSize * screenDensity).coerceIn(120f, 200f)
+    val finalJoystickSize = joystickSize ?: responsiveJoystickSize.dp
     var thumbOffset by remember { mutableStateOf(Offset.Zero) } // Offset of the thumb's center from the Joystick Box's center
     var joystickOutput by remember { mutableStateOf(Pair(0f, 0f)) }
 
-    val density = LocalDensity.current
-    val outerRadiusPx = remember(joystickSize, density) { with(density) { (joystickSize / 2).toPx() } }
-    val thumbRadiusPx = remember(joystickSize, density) { with(density) { (joystickSize / 6).toPx() } } 
+    val outerRadiusPx = remember(finalJoystickSize, density) { with(density) { (finalJoystickSize / 2).toPx() } }
+    val thumbRadiusPx = remember(finalJoystickSize, density) { with(density) { (finalJoystickSize / 6).toPx() } } 
     // The maximum distance the center of the thumb can move from the center of the joystick
     val maxThumbDragRadius = remember(outerRadiusPx, thumbRadiusPx) { outerRadiusPx - thumbRadiusPx }
 
@@ -54,7 +63,7 @@ fun Joystick(
 
     Box(
         modifier = modifier
-            .size(joystickSize)
+            .size(finalJoystickSize)
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragStart = { /* Can be used if needed, e.g., for haptic feedback */ },

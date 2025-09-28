@@ -14,7 +14,8 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsTab(
-    onResetToDefaults: () -> Unit
+    onResetToDefaults: () -> Unit,
+    onNetworkParametersChanged: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -49,7 +50,7 @@ fun SettingsTab(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         // Existing NetworkTab content can be integrated here if you have it in a separate composable
-        NetworkTab()
+        NetworkTab(onNetworkParametersChanged = onNetworkParametersChanged)
 
         Spacer(modifier = Modifier.height(32.dp))
 

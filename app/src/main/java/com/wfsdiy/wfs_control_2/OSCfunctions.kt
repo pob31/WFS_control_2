@@ -38,7 +38,7 @@ fun Float.toBytesBigEndian(): ByteArray {
     return this.toBits().toBytesBigEndian()
 }
 
-fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, canvasWidth: Float, canvasHeight: Float, isCluster: Boolean = false) {
+fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, isCluster: Boolean = false) {
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -51,8 +51,9 @@ fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, canvasW
                 Log.e("OSC_MESSAGE", "Invalid or blank IP Address: '$ipAddressStr'. OSC message not sent.")
                 return@launch
             }
-            val normalizedX = if (canvasWidth > 0) x / canvasWidth else 0f
-            val normalizedY = if (canvasHeight > 0) y / canvasHeight else 0f
+            val (canvasWidth, canvasHeight) = CanvasDimensions.getCurrentDimensions()
+            val normalizedX = if (canvasWidth > 0f) x / canvasWidth else 0f
+            val normalizedY = if (canvasHeight > 0f) y / canvasHeight else 0f
             val addressPattern = if (isCluster) "/cluster/positionXY" else "/marker/positionXY"
             val addressPatternBytes = getPaddedBytes(addressPattern)
             val typeTagBytes = getPaddedBytes(",iff")
@@ -345,7 +346,6 @@ fun parseAndProcessOscPacket(
 
 fun startOscServer(
     context: Context,
-    getCanvasDimensions: () -> Pair<Float, Float>,
     onOscDataReceived: OscDataCallback,
     onStageWidthChanged: OscStageDimensionCallback? = null,
     onStageDepthChanged: OscStageDimensionCallback? = null,
@@ -363,7 +363,11 @@ fun startOscServer(
                 return@launch
             }
             serverSocket = DatagramSocket(incomingPort)
+            serverSocket.soTimeout = 1000 // Set 1 second timeout to prevent blocking
             Log.i("OSC_SERVER", "OSC Server started and listening on port $incomingPort")
+            Log.i("OSC_SERVER", "Socket bound to: ${serverSocket.localAddress}:${serverSocket.localPort}")
+            Log.i("OSC_SERVER", "Socket is bound: ${serverSocket.isBound}")
+            Log.i("OSC_SERVER", "Socket is closed: ${serverSocket.isClosed}")
             val buffer = ByteArray(1024)
             while (isActive) {
                 val packet = DatagramPacket(buffer, buffer.size)
@@ -372,7 +376,7 @@ fun startOscServer(
                     val receivedData = packet.data.copyOf(packet.length)
                     val remoteAddress = packet.address.hostAddress
                     Log.i("OSC_SERVER", "Received UDP packet from $remoteAddress, length: ${packet.length} bytes.")
-                    val (canvasWidth, canvasHeight) = getCanvasDimensions()
+                    val (canvasWidth, canvasHeight) = CanvasDimensions.getCurrentDimensions()
                     parseAndProcessOscPacket(
                         receivedData,
                         canvasWidth,
