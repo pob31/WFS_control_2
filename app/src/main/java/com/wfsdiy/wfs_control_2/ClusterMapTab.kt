@@ -274,6 +274,7 @@ fun ClusterMapTab(
             drawRect(Color.Black)
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
             drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
+            drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
             clusterMarkers.sortedByDescending { it.id }.forEach { clusterMarker ->
                 drawMarker(clusterMarker, draggingMarkers.containsValue(clusterMarker.id), textPaint, true, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight)
             }

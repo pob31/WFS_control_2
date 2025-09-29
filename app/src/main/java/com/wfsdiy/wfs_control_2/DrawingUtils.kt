@@ -226,3 +226,57 @@ fun <T> DrawScope.drawMarker(
         textPaint.color = originalTextColor
     }
 }
+
+fun DrawScope.drawOriginMarker(
+    currentStageW: Float,
+    currentStageD: Float,
+    currentStageOriginX: Float,
+    currentStageOriginY: Float,
+    canvasPixelW: Float,
+    canvasPixelH: Float,
+    markerRadius: Float = 0f
+) {
+    if (currentStageW <= 0f || currentStageD <= 0f || canvasPixelW <= 0f || canvasPixelH <= 0f) return
+
+    // Adjust canvas boundaries to account for marker radius
+    val effectiveCanvasWidth = canvasPixelW - (markerRadius * 2f)
+    val effectiveCanvasHeight = canvasPixelH - (markerRadius * 2f)
+
+    // Find where a marker would be positioned to have displayed coordinates (0.0, 0.0)
+    // displayedX = displayX - stageOriginX = 0.0 → displayX = stageOriginX
+    // displayedY = displayY - stageOriginY = 0.0 → displayY = stageOriginY
+    
+    // displayX = normalizedX * currentStageW = currentStageOriginX
+    // displayY = normalizedY * currentStageD = currentStageOriginY
+    
+    val normalizedX = currentStageOriginX / currentStageW
+    val normalizedY = currentStageOriginY / currentStageD
+    
+    val canvasX = normalizedX * effectiveCanvasWidth + markerRadius
+    val canvasY = (1f - normalizedY) * effectiveCanvasHeight + markerRadius
+
+    // Draw origin marker: circle with crosshairs
+    val originRadius = 15f
+    val crosshairLength = 20f
+    
+    // Draw circle
+    drawCircle(
+        color = Color.White,
+        radius = originRadius,
+        center = Offset(canvasX, canvasY)
+    )
+    
+    // Draw crosshairs
+    drawLine(
+        color = Color.White,
+        start = Offset(canvasX - crosshairLength, canvasY),
+        end = Offset(canvasX + crosshairLength, canvasY),
+        strokeWidth = 2f
+    )
+    drawLine(
+        color = Color.White,
+        start = Offset(canvasX, canvasY - crosshairLength),
+        end = Offset(canvasX, canvasY + crosshairLength),
+        strokeWidth = 2f
+    )
+}

@@ -302,6 +302,9 @@ fun InputMapTab(
             // Draw the stage corner/center labels (top-left origin assumed by this function)
             drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
 
+            // Draw origin marker at position where displayed coordinates would be (0.0, 0.0)
+            drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
+
             // Draw markers on top of the grid and labels
             currentMarkersState.take(numberOfInputs).sortedByDescending { it.id }.forEach { marker ->
                 // Assuming drawMarker is defined elsewhere and handles its own textPaint settings for visibility/zoom
