@@ -174,6 +174,9 @@ fun parseAndProcessOscPacket(
     onStageWidthChanged: OscStageDimensionCallback? = null,
     onStageDepthChanged: OscStageDimensionCallback? = null,
     onStageHeightChanged: OscStageDimensionCallback? = null,
+    onStageOriginXChanged: OscStageDimensionCallback? = null,
+    onStageOriginYChanged: OscStageDimensionCallback? = null,
+    onStageOriginZChanged: OscStageDimensionCallback? = null,
     onNumberOfInputsChanged: OscNumberOfInputsCallback? = null,
     onClusterZChanged: OscClusterZCallback? = null
 ) {
@@ -232,6 +235,36 @@ fun parseAndProcessOscPacket(
                 val height = parseOscFloat(buffer)
 
                 onStageHeightChanged?.invoke(height)
+            }
+            address == "/stage/originX" -> {
+                if (!buffer.hasRemaining() || parseOscString(buffer) != ",f") {
+                    return
+                }
+                if (buffer.remaining() < 4) {
+                    return
+                }
+                val originX = parseOscFloat(buffer)
+                onStageOriginXChanged?.invoke(originX)
+            }
+            address == "/stage/originY" -> {
+                if (!buffer.hasRemaining() || parseOscString(buffer) != ",f") {
+                    return
+                }
+                if (buffer.remaining() < 4) {
+                    return
+                }
+                val originY = parseOscFloat(buffer)
+                onStageOriginYChanged?.invoke(originY)
+            }
+            address == "/stage/originZ" -> {
+                if (!buffer.hasRemaining() || parseOscString(buffer) != ",f") {
+                    return
+                }
+                if (buffer.remaining() < 4) {
+                    return
+                }
+                val originZ = parseOscFloat(buffer)
+                onStageOriginZChanged?.invoke(originZ)
             }
             address.startsWith("/marker/") || address.startsWith("/cluster/") -> {
                 val isClusterMessage = address.startsWith("/cluster/")
@@ -337,6 +370,9 @@ fun startOscServer(
     onStageWidthChanged: OscStageDimensionCallback? = null,
     onStageDepthChanged: OscStageDimensionCallback? = null,
     onStageHeightChanged: OscStageDimensionCallback? = null,
+    onStageOriginXChanged: OscStageDimensionCallback? = null,
+    onStageOriginYChanged: OscStageDimensionCallback? = null,
+    onStageOriginZChanged: OscStageDimensionCallback? = null,
     onNumberOfInputsChanged: OscNumberOfInputsCallback? = null,
     onClusterZChanged: OscClusterZCallback? = null
 ) {
@@ -372,6 +408,9 @@ fun startOscServer(
                         onStageWidthChanged,
                         onStageDepthChanged,
                         onStageHeightChanged,
+                        onStageOriginXChanged,
+                        onStageOriginYChanged,
+                        onStageOriginZChanged,
                         onNumberOfInputsChanged,
                         onClusterZChanged
                     )

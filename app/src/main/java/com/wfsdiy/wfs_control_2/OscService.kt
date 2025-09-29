@@ -1,0 +1,376 @@
+package com.wfsdiy.wfs_control_2
+
+import android.app.Notification
+import android.app.NotificationChannel
+import android.app.NotificationManager
+import android.app.PendingIntent
+import android.app.Service
+import android.content.Intent
+import android.content.pm.ServiceInfo
+import android.os.Binder
+import android.os.Build
+import android.os.IBinder
+
+import androidx.compose.ui.geometry.Offset
+import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+import java.util.concurrent.ConcurrentLinkedQueue
+
+class OscService : Service() {
+
+    private val binder = OscBinder()
+    private val job = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + job)
+    
+    // Service state tracking
+    private var isServerRunning = false
+    private var serverJob: kotlinx.coroutines.Job? = null
+    
+    // Data classes for buffering OSC data
+    data class OscMarkerUpdate(
+        val id: Int,
+        val name: String?,
+        val position: Offset?,
+        val isCluster: Boolean,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
+    data class OscNormalizedMarkerUpdate(
+        val id: Int,
+        val normalizedX: Float,
+        val normalizedY: Float,
+        val isCluster: Boolean,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
+    data class OscStageUpdate(
+        val type: String, // "width", "depth", "height"
+        val value: Float,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
+    data class OscInputsUpdate(
+        val count: Int,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
+    data class OscClusterZUpdate(
+        val clusterId: Int,
+        val normalizedZ: Float,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
+    // Buffers for incoming OSC data
+    private val markerUpdates = ConcurrentLinkedQueue<OscMarkerUpdate>()
+    private val normalizedMarkerUpdates = ConcurrentLinkedQueue<OscNormalizedMarkerUpdate>()
+    private val stageUpdates = ConcurrentLinkedQueue<OscStageUpdate>()
+    private val inputsUpdates = ConcurrentLinkedQueue<OscInputsUpdate>()
+    private val clusterZUpdates = ConcurrentLinkedQueue<OscClusterZUpdate>()
+    
+    // StateFlows for real-time data (when MainActivity is active)
+    private val _markers = MutableStateFlow<List<Marker>>(emptyList())
+    val markers: StateFlow<List<Marker>> = _markers.asStateFlow()
+    
+    private val _clusterMarkers = MutableStateFlow<List<ClusterMarker>>(emptyList())
+    val clusterMarkers: StateFlow<List<ClusterMarker>> = _clusterMarkers.asStateFlow()
+    
+    private val _clusterNormalizedHeights = MutableStateFlow<List<Float>>(List(10) { 0.2f })
+    val clusterNormalizedHeights: StateFlow<List<Float>> = _clusterNormalizedHeights.asStateFlow()
+    
+    private val _stageWidth = MutableStateFlow(16.0f)
+    val stageWidth: StateFlow<Float> = _stageWidth.asStateFlow()
+    
+    private val _stageDepth = MutableStateFlow(10.0f)
+    val stageDepth: StateFlow<Float> = _stageDepth.asStateFlow()
+    
+    private val _stageHeight = MutableStateFlow(7.0f)
+    val stageHeight: StateFlow<Float> = _stageHeight.asStateFlow()
+    
+    private val _stageOriginX = MutableStateFlow(8.0f) // 0.5 * stageWidth (16.0f)
+    val stageOriginX: StateFlow<Float> = _stageOriginX.asStateFlow()
+    
+    private val _stageOriginY = MutableStateFlow(0.0f)
+    val stageOriginY: StateFlow<Float> = _stageOriginY.asStateFlow()
+    
+    private val _stageOriginZ = MutableStateFlow(0.0f)
+    val stageOriginZ: StateFlow<Float> = _stageOriginZ.asStateFlow()
+    
+    private val _numberOfInputs = MutableStateFlow(64)
+    val numberOfInputs: StateFlow<Int> = _numberOfInputs.asStateFlow()
+    
+    // Store screen dimensions once at startup
+    private var screenWidth: Float = 0f
+    private var screenHeight: Float = 0f
+
+    inner class OscBinder : Binder() {
+        fun getService(): OscService = this@OscService
+    }
+
+    override fun onBind(intent: Intent): IBinder = binder
+
+    override fun onCreate() {
+        super.onCreate()
+        
+        // Initialize screen dimensions once at startup
+        initializeScreenDimensions()
+        
+        createNotificationChannel()
+    }
+    
+    private fun initializeScreenDimensions() {
+        val displayMetrics = resources.displayMetrics
+        screenWidth = displayMetrics.widthPixels.toFloat()
+        screenHeight = displayMetrics.heightPixels.toFloat()
+    }
+
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        try {
+            val notification = createNotification()
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                startForeground(NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC)
+            } else {
+                startForeground(NOTIFICATION_ID, notification)
+            }
+            startServer()
+
+            return START_STICKY
+        } catch (e: Exception) {
+            return START_STICKY
+        }
+    }
+
+    private fun startServer() {
+        if (isServerRunning) {
+            return
+        }
+        
+        serverJob = serviceScope.launch {
+            try {
+                isServerRunning = true
+                startOscServer(
+                    context = this@OscService,
+                    onOscDataReceived = { id, name, position, isCluster ->
+                        // Buffer the data instead of immediately updating UI
+                        markerUpdates.offer(OscMarkerUpdate(id, name, position, isCluster))
+                    },
+                    onStageWidthChanged = { newWidth ->
+                        stageUpdates.offer(OscStageUpdate("width", newWidth))
+                        _stageWidth.value = newWidth
+                    },
+                    onStageDepthChanged = { newDepth ->
+                        stageUpdates.offer(OscStageUpdate("depth", newDepth))
+                        _stageDepth.value = newDepth
+                    },
+                    onStageHeightChanged = { newHeight ->
+                        stageUpdates.offer(OscStageUpdate("height", newHeight))
+                        _stageHeight.value = newHeight
+                    },
+                    onStageOriginXChanged = { newOriginX ->
+                        stageUpdates.offer(OscStageUpdate("originX", newOriginX))
+                        _stageOriginX.value = newOriginX
+                    },
+                    onStageOriginYChanged = { newOriginY ->
+                        stageUpdates.offer(OscStageUpdate("originY", newOriginY))
+                        _stageOriginY.value = newOriginY
+                    },
+                    onStageOriginZChanged = { newOriginZ ->
+                        stageUpdates.offer(OscStageUpdate("originZ", newOriginZ))
+                        _stageOriginZ.value = newOriginZ
+                    },
+                    onNumberOfInputsChanged = { newCount ->
+                        inputsUpdates.offer(OscInputsUpdate(newCount))
+                        _numberOfInputs.value = newCount
+                    },
+                    onClusterZChanged = { clusterId, newNormalizedZ ->
+                        clusterZUpdates.offer(OscClusterZUpdate(clusterId, newNormalizedZ))
+                        val index = clusterId - 1
+                        if (index >= 0 && index < _clusterNormalizedHeights.value.size) {
+                            val updatedHeights = _clusterNormalizedHeights.value.toMutableList()
+                            updatedHeights[index] = newNormalizedZ.coerceIn(0f, 1f)
+                            _clusterNormalizedHeights.value = updatedHeights
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                e.printStackTrace()
+            } finally {
+                isServerRunning = false
+            }
+        }
+    }
+
+    fun sendMarkerPosition(markerId: Int, x: Float, y: Float, isCluster: Boolean) {
+        serviceScope.launch {
+            sendOscPosition(this@OscService, markerId, x, y, isCluster)
+        }
+    }
+
+    fun sendClusterZ(clusterId: Int, normalizedZ: Float) {
+        serviceScope.launch {
+            sendOscClusterZ(this@OscService, clusterId, normalizedZ)
+        }
+    }
+    
+    fun startOscServerWithCanvasDimensions(canvasWidth: Float, canvasHeight: Float) {
+        // Update the shared canvas dimensions
+        CanvasDimensions.updateDimensions(canvasWidth, canvasHeight)
+        startServer()
+    }
+    
+    fun startOscServer() {
+        startServer()
+    }
+    
+    fun sendArrayAdjustCommand(oscAddress: String, arrayId: Int, value: Float) {
+        serviceScope.launch {
+            sendOscArrayAdjustCommand(this@OscService, oscAddress, arrayId, value)
+        }
+    }
+    
+    fun isOscServerRunning(): Boolean {
+        return isServerRunning
+    }
+    
+    fun restartOscServer() {
+        serverJob?.cancel()
+        isServerRunning = false
+        startServer()
+    }
+    
+    fun updateNetworkParameters() {
+        restartOscServer()
+    }
+    
+    // Methods for MainActivity to get buffered data
+    fun getBufferedMarkerUpdates(): List<OscMarkerUpdate> {
+        val updates = mutableListOf<OscMarkerUpdate>()
+        while (markerUpdates.isNotEmpty()) {
+            markerUpdates.poll()?.let { updates.add(it) }
+        }
+        return updates
+    }
+    
+    fun getBufferedStageUpdates(): List<OscStageUpdate> {
+        val updates = mutableListOf<OscStageUpdate>()
+        while (stageUpdates.isNotEmpty()) {
+            stageUpdates.poll()?.let { updates.add(it) }
+        }
+        return updates
+    }
+    
+    fun getBufferedInputsUpdates(): List<OscInputsUpdate> {
+        val updates = mutableListOf<OscInputsUpdate>()
+        while (inputsUpdates.isNotEmpty()) {
+            inputsUpdates.poll()?.let { updates.add(it) }
+        }
+        return updates
+    }
+    
+    fun getBufferedClusterZUpdates(): List<OscClusterZUpdate> {
+        val updates = mutableListOf<OscClusterZUpdate>()
+        while (clusterZUpdates.isNotEmpty()) {
+            clusterZUpdates.poll()?.let { updates.add(it) }
+        }
+        return updates
+    }
+    
+    // Methods for MainActivity to sync current state
+    fun syncMarkers(markers: List<Marker>) {
+        _markers.value = markers
+    }
+    
+    fun syncClusterMarkers(clusterMarkers: List<ClusterMarker>) {
+        _clusterMarkers.value = clusterMarkers
+    }
+    
+    fun syncClusterHeights(heights: List<Float>) {
+        _clusterNormalizedHeights.value = heights
+    }
+    
+    fun syncStageDimensions(width: Float, depth: Float, height: Float, originX: Float = -1f, originY: Float = 0f, originZ: Float = 0f) {
+        _stageWidth.value = width
+        _stageDepth.value = depth
+        _stageHeight.value = height
+        _stageOriginX.value = if (originX == -1f) width * 0.5f else originX
+        _stageOriginY.value = originY
+        _stageOriginZ.value = originZ
+    }
+    
+    fun syncNumberOfInputs(count: Int) {
+        _numberOfInputs.value = count
+    }
+
+    override fun onDestroy() {
+        super.onDestroy()
+        
+        serverJob?.cancel()
+        isServerRunning = false
+        job.cancel()
+    }
+
+    private fun createNotificationChannel() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(
+                NOTIFICATION_CHANNEL_ID, 
+                "OSC Service", 
+                NotificationManager.IMPORTANCE_LOW
+            ).apply {
+                description = "Background service for OSC communication"
+                setShowBadge(false)
+                enableLights(false)
+                enableVibration(false)
+            }
+            getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+        }
+    }
+
+    private fun createNotification(): Notification {
+        return try {
+            val notificationIntent = Intent(this, MainActivity::class.java).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
+                action = "com.wfsdiy.wfs_control_2.NOTIFICATION_TAP"
+            }
+            
+            val pendingIntentFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+            } else {
+                PendingIntent.FLAG_UPDATE_CURRENT
+            }
+            
+            val pendingIntent = PendingIntent.getActivity(this, 0, notificationIntent, pendingIntentFlags)
+
+            NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("WFS Control")
+                .setContentText("OSC Service is running.")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setContentIntent(pendingIntent)
+                .setOngoing(true)
+                .setAutoCancel(false)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
+        } catch (e: Exception) {
+            NotificationCompat.Builder(this, NOTIFICATION_CHANNEL_ID)
+                .setContentTitle("WFS Control")
+                .setContentText("OSC Service is running.")
+                .setSmallIcon(android.R.drawable.ic_dialog_info)
+                .setOngoing(true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setCategory(NotificationCompat.CATEGORY_SERVICE)
+                .build()
+        }
+    }
+
+    companion object {
+        private const val NOTIFICATION_ID = 1
+        private const val NOTIFICATION_CHANNEL_ID = "OscServiceChannel"
+    }
+}
+

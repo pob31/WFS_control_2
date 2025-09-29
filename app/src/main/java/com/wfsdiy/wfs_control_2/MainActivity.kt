@@ -304,6 +304,9 @@ fun WFSControlApp() {
     var stageWidth by remember { mutableStateOf(16.0f) }
     var stageDepth by remember { mutableStateOf(10.0f) }
     var stageHeight by remember { mutableStateOf(7.0f) }
+    var stageOriginX by remember { mutableStateOf(8.0f) }
+    var stageOriginY by remember { mutableStateOf(0.0f) }
+    var stageOriginZ by remember { mutableStateOf(0.0f) }
 
     val serviceConnection = remember {
         object : ServiceConnection {
@@ -433,6 +436,9 @@ fun WFSControlApp() {
                         "width" -> stageWidth = update.value
                         "depth" -> stageDepth = update.value
                         "height" -> stageHeight = update.value
+                        "originX" -> stageOriginX = update.value
+                        "originY" -> stageOriginY = update.value
+                        "originZ" -> stageOriginZ = update.value
                     }
                 }
                 
@@ -458,12 +464,12 @@ fun WFSControlApp() {
     }
 
     // Sync local state with service when it changes
-    LaunchedEffect(markers, clusterMarkers, clusterNormalizedHeights, stageWidth, stageDepth, stageHeight, numberOfInputs) {
+    LaunchedEffect(markers, clusterMarkers, clusterNormalizedHeights, stageWidth, stageDepth, stageHeight, stageOriginX, stageOriginY, stageOriginZ, numberOfInputs) {
         if (isBound && viewModel != null) {
             viewModel.syncMarkers(markers)
             viewModel.syncClusterMarkers(clusterMarkers)
             viewModel.syncClusterHeights(clusterNormalizedHeights)
-            viewModel.syncStageDimensions(stageWidth, stageDepth, stageHeight)
+            viewModel.syncStageDimensions(stageWidth, stageDepth, stageHeight, stageOriginX, stageOriginY, stageOriginZ)
             viewModel.syncNumberOfInputs(numberOfInputs)
         }
     }
@@ -494,36 +500,36 @@ fun WFSControlApp() {
         initialInputLayoutDone = false
     }
 
-    Column(modifier = Modifier.fillMaxSize()) {
-        TabRow(
-            selectedTabIndex = selectedTab,
-            modifier = Modifier.height(56.dp),
-            containerColor = Color.DarkGray // Set a base color for the TabRow if needed, otherwise it might be transparent or themed
-        ) {
-            tabs.forEachIndexed { index, title ->
-                val isSelected = selectedTab == index
-                Tab(
-                    selected = isSelected,
-                    onClick = { selectedTab = index },
-                    text = {
-                        Text(
-                            title,
-                            fontSize = dynamicTabFontSize,
-                            color = if (isSelected) Color.White else Color.LightGray
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxHeight()
-                        .background(if (isSelected) Color.Black else Color.DarkGray)
-                )
+        Column(modifier = Modifier.fillMaxSize()) {
+            TabRow(
+                selectedTabIndex = selectedTab,
+                modifier = Modifier.height(56.dp),
+                containerColor = Color.DarkGray // Set a base color for the TabRow if needed, otherwise it might be transparent or themed
+            ) {
+                tabs.forEachIndexed { index, title ->
+                    val isSelected = selectedTab == index
+                    Tab(
+                        selected = isSelected,
+                        onClick = { selectedTab = index },
+                        text = {
+                            Text(
+                                title,
+                                fontSize = dynamicTabFontSize,
+                                color = if (isSelected) Color.White else Color.LightGray
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .background(if (isSelected) Color.Black else Color.DarkGray)
+                    )
+                }
             }
-        }
 
-        when (selectedTab) {
-            0 -> InputMapTab(
-                numberOfInputs = numberOfInputs,
-                markers = markers,
-                onMarkersInitiallyPositioned = { newMarkerList ->
+            when (selectedTab) {
+                0 -> InputMapTab(
+                    numberOfInputs = numberOfInputs,
+                    markers = markers,
+                    onMarkersInitiallyPositioned = { newMarkerList ->
                     markers = newMarkerList
                     // Send OSC data via service if available
                     val firstMarker = newMarkerList.firstOrNull()
@@ -535,39 +541,41 @@ fun WFSControlApp() {
                             false
                         )
                     }
-                },
-                onCanvasSizeChanged = { width, height ->
-                    currentCanvasPixelWidth = width
-                    currentCanvasPixelHeight = height
+                    },
+                    onCanvasSizeChanged = { width, height ->
+                        currentCanvasPixelWidth = width
+                        currentCanvasPixelHeight = height
                     // Update shared canvas dimensions
                     CanvasDimensions.updateDimensions(width, height)
-                },
-                initialLayoutDone = initialInputLayoutDone,
-                onInitialLayoutDone = { initialInputLayoutDone = true },
-                stageWidth = stageWidth,
-                stageDepth = stageDepth
-            )
-            1 -> LockingTab(
-                numberOfInputs = numberOfInputs,
-                markers = markers,
+                    },
+                    initialLayoutDone = initialInputLayoutDone,
+                    onInitialLayoutDone = { initialInputLayoutDone = true },
+                    stageWidth = stageWidth,
+                stageDepth = stageDepth,
+                stageOriginX = stageOriginX,
+                stageOriginY = stageOriginY
+                )
+                1 -> LockingTab(
+                    numberOfInputs = numberOfInputs,
+                    markers = markers,
                 onMarkersChanged = { updatedMarkers -> 
                     markers = updatedMarkers
                     // Update service with new marker states
                     viewModel?.syncMarkers(updatedMarkers)
                 }
-            )
-            2 -> VisibilityTab(
-                numberOfInputs = numberOfInputs,
-                markers = markers,
+                )
+                2 -> VisibilityTab(
+                    numberOfInputs = numberOfInputs,
+                    markers = markers,
                 onMarkersChanged = { updatedMarkers -> 
                     markers = updatedMarkers
                     // Update service with new marker states
                     viewModel?.syncMarkers(updatedMarkers)
                 }
-            )
-            3 -> InputParametersTab()
-            4 -> ClusterMapTab(
-                clusterMarkers = clusterMarkers,
+                )
+                3 -> InputParametersTab()
+                4 -> ClusterMapTab(
+                    clusterMarkers = clusterMarkers,
                 onClusterMarkersChanged = { updatedClusterMarkers ->
                     // Only update state if there are actual changes (not just initial layout)
                     val hasChanges = updatedClusterMarkers.any { updatedMarker ->
@@ -583,30 +591,33 @@ fun WFSControlApp() {
                         viewModel?.syncClusterMarkers(updatedClusterMarkers)
                     }
                 },
-                onCanvasSizeChanged = { width, height ->
-                    currentCanvasPixelWidth = width
-                    currentCanvasPixelHeight = height
+                    onCanvasSizeChanged = { width, height ->
+                        currentCanvasPixelWidth = width
+                        currentCanvasPixelHeight = height
                     // Update shared canvas dimensions
                     CanvasDimensions.updateDimensions(width, height)
-                },
-                initialLayoutDone = initialClusterLayoutDone,
-                onInitialLayoutDone = { initialClusterLayoutDone = true },
-                stageWidth = stageWidth,
+                    },
+                    initialLayoutDone = initialClusterLayoutDone,
+                    onInitialLayoutDone = { initialClusterLayoutDone = true },
+                    stageWidth = stageWidth,
                 stageDepth = stageDepth,
+                stageOriginX = stageOriginX,
+                stageOriginY = stageOriginY,
                 viewModel = viewModel
-            )
-            5 -> ClusterHeightTab(
-                clusterNormalizedHeights = clusterNormalizedHeights,
-                stageHeight = stageHeight,
-                onNormalizedHeightChanged = { index, newNormalizedHeight ->
+                )
+                5 -> ClusterHeightTab(
+                    clusterNormalizedHeights = clusterNormalizedHeights,
+                    stageHeight = stageHeight,
+                stageOriginZ = stageOriginZ,
+                    onNormalizedHeightChanged = { index, newNormalizedHeight ->
                     val updatedHeights = clusterNormalizedHeights.toMutableList()
                     updatedHeights[index] = newNormalizedHeight.coerceIn(0f, 1f)
                     clusterNormalizedHeights = updatedHeights
                     // Send OSC data via service if available
                     viewModel?.sendClusterZ(index + 1, updatedHeights[index])
-                }
-            )
-            6 -> ArrayAdjustTab()
+                    }
+                )
+                6 -> ArrayAdjustTab()
             7 -> SettingsTab(
                 onResetToDefaults = resetToDefaults,
                 onNetworkParametersChanged = {

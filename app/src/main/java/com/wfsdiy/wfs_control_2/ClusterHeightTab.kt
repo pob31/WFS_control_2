@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 fun ClusterHeightTab(
     clusterNormalizedHeights: List<Float>,
     stageHeight: Float,
+    stageOriginZ: Float,
     onNormalizedHeightChanged: (index: Int, newNormalizedHeight: Float) -> Unit
 ) {
     var draggingSliderIndex by remember { mutableStateOf<Int?>(null) }
@@ -180,8 +181,9 @@ fun ClusterHeightTab(
                 }
 
                 val denormalizedHeight = normalizedHeight * stageHeight
+                val adjustedHeight = denormalizedHeight - stageOriginZ
                 val heightText = if (draggingSliderIndex == index) { // Check against the correct index
-                    String.format("%.1fm", denormalizedHeight)
+                    String.format("%.1fm", adjustedHeight)
                 } else {
                     ""
                 }

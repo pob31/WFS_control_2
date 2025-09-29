@@ -36,6 +36,8 @@ fun ClusterMapTab(
     onInitialLayoutDone: () -> Unit,
     stageWidth: Float,
     stageDepth: Float,
+    stageOriginX: Float,
+    stageOriginY: Float,
     viewModel: MainActivityViewModel? = null
 ) {
     val context = LocalContext.current
@@ -271,9 +273,9 @@ fun ClusterMapTab(
         ) {
             drawRect(Color.Black)
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
-            drawStageCornerLabels(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
+            drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
             clusterMarkers.sortedByDescending { it.id }.forEach { clusterMarker ->
-                drawMarker(clusterMarker, draggingMarkers.containsValue(clusterMarker.id), textPaint, true, stageWidth, stageDepth, canvasWidth, canvasHeight)
+                drawMarker(clusterMarker, draggingMarkers.containsValue(clusterMarker.id), textPaint, true, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight)
             }
         }
     }

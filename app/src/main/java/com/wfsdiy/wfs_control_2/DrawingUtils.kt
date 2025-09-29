@@ -33,6 +33,8 @@ internal data class StagePointInfo(
 fun DrawScope.drawStageCornerLabels(
     currentStageW: Float,
     currentStageD: Float,
+    currentStageOriginX: Float,
+    currentStageOriginY: Float,
     canvasPixelW: Float,
     canvasPixelH: Float,
     markerRadius: Float = 0f
@@ -50,37 +52,44 @@ fun DrawScope.drawStageCornerLabels(
     val effectiveCanvasWidth = canvasPixelW - (markerRadius * 2f)
     val effectiveCanvasHeight = canvasPixelH - (markerRadius * 2f)
 
+    // Calculate corner coordinates based on stage origin
+    val bottomLeftX = if (currentStageOriginX == 0f) 0f else -1*currentStageOriginX
+    val bottomLeftY = if (currentStageOriginY == 0f) 0f else -1*currentStageOriginY
+    val bottomRightX = currentStageW - currentStageOriginX
+    val bottomRightY = if (currentStageOriginY == 0f) 0f else -1*currentStageOriginY
+    val topLeftX = if (currentStageOriginX == 0f) 0f else -1*currentStageOriginX
+    val topLeftY = currentStageD - currentStageOriginY
+    val topRightX = currentStageW - currentStageOriginX
+    val topRightY = currentStageD - currentStageOriginY
+
     val pointsToDraw = listOf(
-        StagePointInfo(-currentStageW / 2f, 0f, Paint.Align.LEFT, false), // Bottom-Left
-        StagePointInfo(0f, 0f, Paint.Align.CENTER, false),                  // Bottom-Center
-        StagePointInfo(currentStageW / 2f, 0f, Paint.Align.RIGHT, false),  // Bottom-Right
-        StagePointInfo(-currentStageW / 2f, currentStageD, Paint.Align.LEFT, true), // Top-Left
-        StagePointInfo(0f, currentStageD, Paint.Align.CENTER, true),       // Top-Center
-        StagePointInfo(currentStageW / 2f, currentStageD, Paint.Align.RIGHT, true) // Top-Right
+        StagePointInfo(bottomLeftX, bottomLeftY, Paint.Align.LEFT, false), // Bottom-Left
+        StagePointInfo(0f, bottomLeftY, Paint.Align.CENTER, false),        // Bottom-Center
+        StagePointInfo(bottomRightX, bottomRightY, Paint.Align.RIGHT, false), // Bottom-Right
+        StagePointInfo(topLeftX, topLeftY, Paint.Align.LEFT, true),         // Top-Left
+        StagePointInfo(0f, topLeftY, Paint.Align.CENTER, true),            // Top-Center
+        StagePointInfo(topRightX, topRightY, Paint.Align.RIGHT, true)      // Top-Right
     )
 
     pointsToDraw.forEach { point ->
-        // Simply display the stage coordinates as requested
+        // Display the stage coordinates based on origin
         val labelText = "(${String.format("%.1f", point.stageX)}, ${String.format("%.1f", point.stageY)})"
         paint.textAlign = point.align
 
-        // Calculate canvas position for drawing the label
-        val canvasX = ((point.stageX + currentStageW / 2f) / currentStageW) * effectiveCanvasWidth + markerRadius
-        val canvasY = ((currentStageD - point.stageY) / currentStageD) * effectiveCanvasHeight + markerRadius // Y is inverted
-
-        val finalDrawX = when (point.align) {
-            Paint.Align.LEFT -> canvasX + padding
-            Paint.Align.RIGHT -> canvasX - padding
-            else -> canvasX // CENTER
+        // Fixed canvas positions - corners and center of top/bottom edges
+        val canvasX = when (point.align) {
+            Paint.Align.LEFT -> markerRadius + padding
+            Paint.Align.RIGHT -> effectiveCanvasWidth + markerRadius - padding
+            else -> (effectiveCanvasWidth / 2f) + markerRadius // CENTER
         }
-
-        val finalDrawY = if (point.isTopAnchor) {
-            canvasY + padding + abs(paint.fontMetrics.ascent)
+        
+        val canvasY = if (point.isTopAnchor) {
+            markerRadius + padding + abs(paint.fontMetrics.ascent)
         } else {
-            canvasY - padding
+            effectiveCanvasHeight + markerRadius - padding
         }
 
-        drawContext.canvas.nativeCanvas.drawText(labelText, finalDrawX, finalDrawY, paint)
+        drawContext.canvas.nativeCanvas.drawText(labelText, canvasX, canvasY, paint)
     }
 }
 
@@ -95,6 +104,8 @@ fun <T> DrawScope.drawMarker(
     isClusterMarker: Boolean,
     currentStageW: Float,
     currentStageD: Float,
+    currentStageOriginX: Float,
+    currentStageOriginY: Float,
     canvasPixelW: Float,
     canvasPixelH: Float
 ) where T : Any {
@@ -178,10 +189,14 @@ fun <T> DrawScope.drawMarker(
         val normalizedY = if (effectiveHeight > 0f) 1f - ((currentPixelY - markerRadius) / effectiveHeight) else 0f
 
         // Convert to stage coordinates for display
-        val displayX = currentStageW * (normalizedX - 0.5f)
+        val displayX = normalizedX * currentStageW
         val displayY = normalizedY * currentStageD
 
-        val coordText = " (${String.format("%.1f", displayX)}, ${String.format("%.1f", displayY)})"
+        // Adjust coordinates by subtracting stage origin
+        val adjustedX = displayX - currentStageOriginX
+        val adjustedY = displayY - currentStageOriginY
+
+        val coordText = " (${String.format("%.1f", adjustedX)}, ${String.format("%.1f", adjustedY)})"
 
         val originalTextSize = textPaint.textSize
         val originalTextAlign = textPaint.textAlign

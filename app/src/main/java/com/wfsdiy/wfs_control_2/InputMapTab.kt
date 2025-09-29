@@ -104,7 +104,9 @@ fun InputMapTab(
     initialLayoutDone: Boolean,
     onInitialLayoutDone: () -> Unit,
     stageWidth: Float,
-    stageDepth: Float
+    stageDepth: Float,
+    stageOriginX: Float,
+    stageOriginY: Float
 ) {
     val context = LocalContext.current
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() }
@@ -298,12 +300,12 @@ fun InputMapTab(
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
             
             // Draw the stage corner/center labels (top-left origin assumed by this function)
-            drawStageCornerLabels(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
+            drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
 
             // Draw markers on top of the grid and labels
             currentMarkersState.take(numberOfInputs).sortedByDescending { it.id }.forEach { marker ->
                 // Assuming drawMarker is defined elsewhere and handles its own textPaint settings for visibility/zoom
-                drawMarker(marker, draggingMarkers.containsValue(marker.id), textPaint, false, stageWidth, stageDepth, canvasWidth, canvasHeight)
+                drawMarker(marker, draggingMarkers.containsValue(marker.id), textPaint, false, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight)
             }
         }
     }
