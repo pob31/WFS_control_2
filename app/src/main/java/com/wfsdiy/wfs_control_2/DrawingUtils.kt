@@ -2,7 +2,7 @@ package com.wfsdiy.wfs_control_2
 
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.util.Log
+
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -34,7 +34,8 @@ fun DrawScope.drawStageCornerLabels(
     currentStageW: Float,
     currentStageD: Float,
     canvasPixelW: Float,
-    canvasPixelH: Float
+    canvasPixelH: Float,
+    markerRadius: Float = 0f
 ) {
     if (currentStageW <= 0f || currentStageD <= 0f || canvasPixelW <= 0f || canvasPixelH <= 0f) return
 
@@ -44,6 +45,10 @@ fun DrawScope.drawStageCornerLabels(
         textSize = if (canvasPixelH > 0f) canvasPixelH / 45f else 20f // Default if canvasPixelH is 0
     }
     val padding = if (canvasPixelH > 0f) canvasPixelH / 60f else 10f
+
+    // Adjust canvas boundaries to account for marker radius
+    val effectiveCanvasWidth = canvasPixelW - (markerRadius * 2f)
+    val effectiveCanvasHeight = canvasPixelH - (markerRadius * 2f)
 
     val pointsToDraw = listOf(
         StagePointInfo(-currentStageW / 2f, 0f, Paint.Align.LEFT, false), // Bottom-Left
@@ -55,11 +60,13 @@ fun DrawScope.drawStageCornerLabels(
     )
 
     pointsToDraw.forEach { point ->
+        // Simply display the stage coordinates as requested
         val labelText = "(${String.format("%.1f", point.stageX)}, ${String.format("%.1f", point.stageY)})"
         paint.textAlign = point.align
 
-        val canvasX = ((point.stageX + currentStageW / 2f) / currentStageW) * canvasPixelW
-        val canvasY = ((currentStageD - point.stageY) / currentStageD) * canvasPixelH // Y is inverted
+        // Calculate canvas position for drawing the label
+        val canvasX = ((point.stageX + currentStageW / 2f) / currentStageW) * effectiveCanvasWidth + markerRadius
+        val canvasY = ((currentStageD - point.stageY) / currentStageD) * effectiveCanvasHeight + markerRadius // Y is inverted
 
         val finalDrawX = when (point.align) {
             Paint.Align.LEFT -> canvasX + padding
@@ -113,7 +120,7 @@ fun <T> DrawScope.drawMarker(
             radius = markerInstance.radius
         }
         else -> {
-            Log.e("DrawMarker", "Unsupported marker type: ${markerInstance::class.java.name}")
+
             return
         }
     }
@@ -159,14 +166,22 @@ fun <T> DrawScope.drawMarker(
         drawContext.canvas.nativeCanvas.drawText(idText, position.x, idTextY, textPaint)
     }
 
-    if (isBeingDragged && canvasPixelW > 0f && canvasPixelH > 0f && currentStageW > 0f && currentStageD > 0f) {
+    if (isBeingDragged && canvasPixelW > 0f && canvasPixelH > 0f) {
         val currentPixelX = position.x
         val currentPixelY = position.y
 
-        val stageX = ((currentPixelX / canvasPixelW) * currentStageW) - (currentStageW / 2f)
-        val stageY = currentStageD - ((currentPixelY / canvasPixelH) * currentStageD)
+        // Convert to 0.0-1.0 normalized coordinates accounting for marker radius
+        val markerRadius = CanvasDimensions.getCurrentMarkerRadius()
+        val effectiveWidth = canvasPixelW - (markerRadius * 2f)
+        val effectiveHeight = canvasPixelH - (markerRadius * 2f)
+        val normalizedX = if (effectiveWidth > 0f) (currentPixelX - markerRadius) / effectiveWidth else 0f
+        val normalizedY = if (effectiveHeight > 0f) 1f - ((currentPixelY - markerRadius) / effectiveHeight) else 0f
 
-        val coordText = " (${String.format("%.1f", stageX)}, ${String.format("%.1f", stageY)})"
+        // Convert to stage coordinates for display
+        val displayX = currentStageW * (normalizedX - 0.5f)
+        val displayY = normalizedY * currentStageD
+
+        val coordText = " (${String.format("%.1f", displayX)}, ${String.format("%.1f", displayY)})"
 
         val originalTextSize = textPaint.textSize
         val originalTextAlign = textPaint.textAlign

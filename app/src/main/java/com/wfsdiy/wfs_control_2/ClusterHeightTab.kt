@@ -76,24 +76,24 @@ fun ClusterHeightTab(
 
                     // This LaunchedEffect is crucial for updating draggingSliderIndex
                     LaunchedEffect(interactionSource) {
-                        // Log.d(\"SliderDebug\", \"Slider $index: LaunchedEffect for interactionSource (draggingSliderIndex) started.\")
+
                         interactionSource.interactions.collect { interaction ->
                             when (interaction) {
                                 is androidx.compose.foundation.interaction.DragInteraction.Start -> {
-                                    // Log.d(\"SliderDebug\", \"Slider $index: DragInteraction.Start. Setting draggingSliderIndex to $index.\")
+
                                     draggingSliderIndex = index
                                 }
                                 is androidx.compose.foundation.interaction.DragInteraction.Stop -> {
-                                    // Log.d(\"SliderDebug\", \"Slider $index: DragInteraction.Stop. Current draggingSliderIndex: $draggingSliderIndex.\")
+
                                     if (draggingSliderIndex == index) {
-                                        // Log.d(\"SliderDebug\", \"Slider $index: Clearing draggingSliderIndex from DragInteraction.Stop.\")
+
                                         draggingSliderIndex = null
                                     }
                                 }
                                 is androidx.compose.foundation.interaction.PressInteraction.Cancel -> { // Also handle cancel
-                                    // Log.d(\"SliderDebug\", \"Slider $index: PressInteraction.Cancel. Current draggingSliderIndex: $draggingSliderIndex.\")
+
                                     if (draggingSliderIndex == index) {
-                                        // Log.d(\"SliderDebug\", \"Slider $index: Clearing draggingSliderIndex from PressInteraction.Cancel.\")
+
                                         draggingSliderIndex = null
                                     }
                                 }
@@ -119,9 +119,9 @@ fun ClusterHeightTab(
                         },
                         valueRange = 0f..1f,
                         onValueChangeFinished = {
-                            // Log.d(\"SliderDebug\", \"Slider $index: onValueChangeFinished. Current draggingSliderIndex: $draggingSliderIndex.\")
+
                             if (draggingSliderIndex == index) { // Ensure it's the correct slider
-                                // Log.d(\"SliderDebug\", \"Slider $index: Clearing draggingSliderIndex from onValueChangeFinished.\")
+
                                 draggingSliderIndex = null
                             }
                         },
@@ -185,7 +185,7 @@ fun ClusterHeightTab(
                 } else {
                     ""
                 }
-                // Log.d(\"SliderDebug\", \"Slider $index: Text generated: '$heightText'. draggingSliderIndex: $draggingSliderIndex\")
+
 
                 val dynamicFontSize = (this@BoxWithConstraints.maxWidth.value / 8f).sp
                 Text(

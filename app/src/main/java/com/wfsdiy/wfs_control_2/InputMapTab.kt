@@ -3,7 +3,7 @@ package com.wfsdiy.wfs_control_2
 import android.annotation.SuppressLint
 import android.graphics.Paint
 import android.graphics.Typeface
-import android.util.Log
+
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -29,15 +29,20 @@ fun DrawScope.drawStageCoordinates(
     stageWidth: Float,
     stageDepth: Float,
     canvasWidthPx: Float,
-    canvasHeightPx: Float
+    canvasHeightPx: Float,
+    markerRadius: Float = 0f
 ) {
     if (stageWidth <= 0f || stageDepth <= 0f) return
 
-    val pixelsPerMeterX = canvasWidthPx / stageWidth
-    val pixelsPerMeterY = canvasHeightPx / stageDepth
+    // Adjust canvas boundaries to account for marker radius
+    val effectiveCanvasWidth = canvasWidthPx - (markerRadius * 2f)
+    val effectiveCanvasHeight = canvasHeightPx - (markerRadius * 2f)
+    
+    val pixelsPerMeterX = effectiveCanvasWidth / stageWidth
+    val pixelsPerMeterY = effectiveCanvasHeight / stageDepth
 
     val originXPx = canvasWidthPx / 2f
-    val originYPx = canvasHeightPx // Bottom of the canvas
+    val originYPx = canvasHeightPx - markerRadius // Bottom of effective canvas
 
     val lineColor = Color.DarkGray
     val lineStrokeWidth = 1f // Use 1 pixel for thin grid lines
@@ -45,11 +50,11 @@ fun DrawScope.drawStageCoordinates(
     // Horizontal lines for depth (from bottom up)
     for (depthStep in 1..floor(stageDepth).toInt()) {
         val yPx = originYPx - (depthStep * pixelsPerMeterY)
-        if (yPx >= 0 && yPx <= canvasHeightPx) { // Draw only if within canvas bounds
+        if (yPx >= markerRadius && yPx <= canvasHeightPx - markerRadius) { // Draw only if within effective canvas bounds
             drawLine(
                 color = lineColor,
-                start = Offset(0f, yPx),
-                end = Offset(canvasWidthPx, yPx),
+                start = Offset(markerRadius, yPx),
+                end = Offset(canvasWidthPx - markerRadius, yPx),
                 strokeWidth = lineStrokeWidth
             )
         }
@@ -59,29 +64,29 @@ fun DrawScope.drawStageCoordinates(
     // Center line (0m)
     drawLine(
         color = lineColor,
-        start = Offset(originXPx, 0f),
-        end = Offset(originXPx, canvasHeightPx),
+        start = Offset(originXPx, markerRadius),
+        end = Offset(originXPx, canvasHeightPx - markerRadius),
         strokeWidth = lineStrokeWidth
     )
     // Lines to the right and left of center
     for (widthStep in 1..floor(stageWidth / 2f).toInt()) {
         // Right side
         val xPxPositive = originXPx + (widthStep * pixelsPerMeterX)
-        if (xPxPositive >= 0 && xPxPositive <= canvasWidthPx) {
+        if (xPxPositive >= markerRadius && xPxPositive <= canvasWidthPx - markerRadius) {
             drawLine(
                 color = lineColor,
-                start = Offset(xPxPositive, 0f),
-                end = Offset(xPxPositive, canvasHeightPx),
+                start = Offset(xPxPositive, markerRadius),
+                end = Offset(xPxPositive, canvasHeightPx - markerRadius),
                 strokeWidth = lineStrokeWidth
             )
         }
         // Left side
         val xPxNegative = originXPx - (widthStep * pixelsPerMeterX)
-        if (xPxNegative >= 0 && xPxNegative <= canvasWidthPx) {
+        if (xPxNegative >= markerRadius && xPxNegative <= canvasWidthPx - markerRadius) {
             drawLine(
                 color = lineColor,
-                start = Offset(xPxNegative, 0f),
-                end = Offset(xPxNegative, canvasHeightPx),
+                start = Offset(xPxNegative, markerRadius),
+                end = Offset(xPxNegative, canvasHeightPx - markerRadius),
                 strokeWidth = lineStrokeWidth
             )
         }
@@ -131,11 +136,11 @@ fun InputMapTab(
         // Update shared canvas dimensions and call onCanvasSizeChanged
         LaunchedEffect(canvasWidth, canvasHeight) {
             if (canvasWidth > 0f && canvasHeight > 0f) {
-                Log.d("CANVAS_DIMENSIONS", "InputMapTab updating shared canvas dimensions: ${canvasWidth}x${canvasHeight}")
                 CanvasDimensions.updateDimensions(canvasWidth, canvasHeight)
+                CanvasDimensions.updateMarkerRadius(markerRadius)
                 onCanvasSizeChanged(canvasWidth, canvasHeight)
             } else {
-                Log.d("CANVAS_DIMENSIONS", "InputMapTab canvas dimensions still zero: ${canvasWidth}x${canvasHeight}")
+
             }
         }
 
@@ -168,8 +173,8 @@ fun InputMapTab(
                         val yPos = centeredStartY + logicalRow * spacingFactor
 
                         marker.copy(
-                            positionX = xPos.coerceIn(marker.radius, canvasWidth - marker.radius),
-                            positionY = yPos.coerceIn(marker.radius, canvasHeight - marker.radius)
+                            positionX = xPos.coerceIn(markerRadius, canvasWidth - markerRadius),
+                            positionY = yPos.coerceIn(markerRadius, canvasHeight - markerRadius)
                         )
                     } else {
                         // For markers beyond numberOfInputs, return them unchanged
@@ -245,8 +250,8 @@ fun InputMapTab(
                                                     val markerToMove = currentMarkersState[originalGlobalIndex] // Get the most up-to-date marker state for radius
 
                                                     val newLogicalPosition = Offset(
-                                                        x = (oldLogicalPosition.x + dragDelta.x).coerceIn(markerToMove.radius, canvasWidth - markerToMove.radius),
-                                                        y = (oldLogicalPosition.y + dragDelta.y).coerceIn(markerToMove.radius, canvasHeight - markerToMove.radius)
+                                                        x = (oldLogicalPosition.x + dragDelta.x).coerceIn(markerRadius, canvasWidth - markerRadius),
+                                                        y = (oldLogicalPosition.y + dragDelta.y).coerceIn(markerRadius, canvasHeight - markerRadius)
                                                     )
                                                     pointerIdToCurrentLogicalPosition[pointerId] = newLogicalPosition
                                                     
@@ -290,10 +295,10 @@ fun InputMapTab(
             drawRect(Color.Black) // Background for the canvas
             
             // Draw the stage grid lines (bottom-center origin)
-            drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight)
+            drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
             
             // Draw the stage corner/center labels (top-left origin assumed by this function)
-            drawStageCornerLabels(stageWidth, stageDepth, canvasWidth, canvasHeight)
+            drawStageCornerLabels(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
 
             // Draw markers on top of the grid and labels
             currentMarkersState.take(numberOfInputs).sortedByDescending { it.id }.forEach { marker ->

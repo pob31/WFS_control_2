@@ -10,7 +10,7 @@ import android.os.Build
 import android.os.Bundle
 import android.os.IBinder
 import android.os.Parcelable
-import android.util.Log
+
 import android.view.View
 import android.view.WindowManager
 import androidx.activity.ComponentActivity
@@ -174,7 +174,6 @@ class MainActivity : ComponentActivity() {
 
     private fun handleNotificationIntent(intent: Intent?) {
         if (intent?.action == "com.wfsdiy.wfs_control_2.NOTIFICATION_TAP") {
-            Log.i("MainActivity", "Notification tapped - bringing app to foreground")
             // The app is already in foreground, no additional action needed
         }
     }
@@ -221,6 +220,7 @@ fun WFSControlApp() {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenWidthDp = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
     val screenDensity = density.density
     
     // Calculate responsive marker radius based on screen size and density
@@ -252,10 +252,35 @@ fun WFSControlApp() {
     var clusterMarkers by rememberSaveable {
         mutableStateOf(
             List(10) { index ->
+                // Initialize with proper grid positions to avoid top-left corner flash
+                val numCols = 5
+                val numRows = 2
+                val spacingFactor = (screenWidthDp.value / 3.5f).coerceIn(80f, 120f)
+                
+                val contentWidthOfCenters = (numCols - 1) * spacingFactor
+                val contentHeightOfCenters = (numRows - 1) * spacingFactor
+                val totalVisualWidth = contentWidthOfCenters + markerRadiusPx * 2f
+                val totalVisualHeight = contentHeightOfCenters + markerRadiusPx * 2f
+                
+                // Use screen dimensions for initial positioning
+                val screenWidth = screenWidthDp.value * density.density
+                val screenHeight = screenHeightDp.value * density.density
+                
+                val centeredStartX = ((screenWidth - totalVisualWidth) / 2f) + markerRadiusPx
+                val centeredStartY = ((screenHeight - totalVisualHeight) / 2f) + markerRadiusPx
+                
+                val logicalCol = index % numCols
+                var logicalRow = index / numCols
+                if (numRows > 1) {
+                    logicalRow = (numRows - 1) - logicalRow
+                }
+                val xPos = centeredStartX + logicalCol * spacingFactor
+                val yPos = centeredStartY + logicalRow * spacingFactor
+                
                 ClusterMarker(
                     id = index + 1,
-                    positionX = screenWidthDp.value * 0.1f, // 10% from left edge
-                    positionY = screenWidthDp.value * 0.1f, // 10% from top edge
+                    positionX = xPos.coerceIn(markerRadiusPx, screenWidth - markerRadiusPx),
+                    positionY = yPos.coerceIn(markerRadiusPx, screenHeight - markerRadiusPx),
                     radius = markerRadiusPx
                 )
             }
@@ -283,17 +308,14 @@ fun WFSControlApp() {
     val serviceConnection = remember {
         object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, service: IBinder?) {
-                Log.i("WFSControlApp", "onServiceConnected called with service: $service")
                 val binder = service as OscService.OscBinder
                 oscService = binder.getService()
                 isBound = true
-                Log.i("WFSControlApp", "OscService connected. Service: $oscService")
             }
 
             override fun onServiceDisconnected(name: ComponentName?) {
                 oscService = null
                 isBound = false
-                Log.i("WFSControlApp", "OscService disconnected.")
             }
         }
     }
@@ -306,8 +328,6 @@ fun WFSControlApp() {
                 ContextCompat.startForegroundService(context, intent)
                 context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
             }
-        } else {
-            Log.w("WFSControlApp", "Notification permission denied.")
         }
     }
 
@@ -317,11 +337,9 @@ fun WFSControlApp() {
         val displayMetrics = context.resources.displayMetrics
         screenWidthPx = displayMetrics.widthPixels.toFloat()
         screenHeightPx = displayMetrics.heightPixels.toFloat()
-        Log.i("WFSControlApp", "Initialized screen dimensions: ${screenWidthPx}x${screenHeightPx}")
         
         // Initialize shared canvas dimensions immediately with screen dimensions
         CanvasDimensions.updateDimensions(screenWidthPx, screenHeightPx)
-        Log.i("WFSControlApp", "Initialized shared canvas dimensions: ${screenWidthPx}x${screenHeightPx}")
         
         val (loadedInputs, loadedLockStates, loadedVisibilityStates) = loadAppSettings(context)
         numberOfInputs = loadedInputs
@@ -337,11 +355,9 @@ fun WFSControlApp() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             when {
                 ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED -> {
-                    Log.i("WFSControlApp", "Starting OscService with notification permission")
                     Intent(context, OscService::class.java).also { intent ->
                         ContextCompat.startForegroundService(context, intent)
                         context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-                        Log.i("WFSControlApp", "OscService startForegroundService and bindService called")
                     }
                 }
                 else -> {
@@ -349,11 +365,9 @@ fun WFSControlApp() {
                 }
             }
         } else {
-            Log.i("WFSControlApp", "Starting OscService (no notification permission needed)")
             Intent(context, OscService::class.java).also { intent ->
                 ContextCompat.startForegroundService(context, intent)
                 context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE)
-                Log.i("WFSControlApp", "OscService startForegroundService and bindService called")
             }
         }
     }
@@ -361,7 +375,6 @@ fun WFSControlApp() {
     // Start OSC server when service is bound (canvas dimensions already initialized)
     LaunchedEffect(isBound, oscService) {
         if (isBound && viewModel != null && !oscServiceStarted) {
-            Log.i("WFSControlApp", "Starting OSC server (canvas dimensions already initialized)")
             viewModel.startOscServer()
             oscServiceStarted = true
         }
@@ -370,20 +383,13 @@ fun WFSControlApp() {
     // Process buffered OSC data when service is available
     LaunchedEffect(isBound, oscService) {
         if (isBound && viewModel != null) {
-            Log.i("WFSControlApp", "Service is bound, checking OSC server status...")
-            val serverRunning = oscService?.isOscServerRunning() ?: false
-            Log.i("WFSControlApp", "OSC server running: $serverRunning")
             while (true) {
                 kotlinx.coroutines.delay(100) // Check every 100ms for buffered data
                 
                 // Process buffered marker updates
                 val markerUpdates = viewModel.getBufferedMarkerUpdates()
-                if (markerUpdates.isNotEmpty()) {
-                    Log.d("BUFFERED_MARKERS", "Processing ${markerUpdates.size} buffered marker updates")
-                }
                 markerUpdates.forEach { update ->
                     if (update.isCluster) {
-                        Log.d("CLUSTER_UPDATE", "Processing cluster marker update for ID ${update.id}")
                         val updatedClusterMarkers = clusterMarkers.map { clusterMarker ->
                             if (clusterMarker.id == update.id) {
                                 var updatedMarker = clusterMarker
@@ -393,7 +399,6 @@ fun WFSControlApp() {
                                         positionX = it.x.coerceIn(clusterMarker.radius, canvasWidth - clusterMarker.radius),
                                         positionY = it.y.coerceIn(clusterMarker.radius, canvasHeight - clusterMarker.radius)
                                     )
-                                    Log.d("CLUSTER_UPDATE", "Updated cluster marker ${update.id} to position (${it.x}, ${it.y}) using canvas dimensions ${canvasWidth}x${canvasHeight}")
                                 }
                                 updatedMarker
                             } else {
@@ -401,7 +406,6 @@ fun WFSControlApp() {
                             }
                         }
                         clusterMarkers = updatedClusterMarkers
-                        Log.d("CLUSTER_UPDATE", "Cluster markers state updated, new count: ${clusterMarkers.size}")
                     } else {
                         markers = markers.map { marker ->
                             if (marker.id == update.id) {
@@ -413,7 +417,6 @@ fun WFSControlApp() {
                                         positionX = it.x.coerceIn(marker.radius, canvasWidth - marker.radius),
                                         positionY = it.y.coerceIn(marker.radius, canvasHeight - marker.radius)
                                     )
-                                    Log.d("MARKER_UPDATE", "Updated marker ${update.id} to position (${it.x}, ${it.y}) using canvas dimensions ${canvasWidth}x${canvasHeight}")
                                 }
                                 updatedMarker
                             } else {
@@ -438,7 +441,6 @@ fun WFSControlApp() {
                 inputsUpdates.forEach { update ->
                     numberOfInputs = update.count
                     initialInputLayoutDone = false
-                    Log.i("WFSControlApp", "Number of inputs updated to: ${update.count} via OSC")
                 }
                 
                 // Process buffered cluster Z updates
@@ -449,9 +451,6 @@ fun WFSControlApp() {
                         val updatedHeights = clusterNormalizedHeights.toMutableList()
                         updatedHeights[index] = update.normalizedZ.coerceIn(0f, 1f)
                         clusterNormalizedHeights = updatedHeights
-                        Log.d("OSC_CLUSTER_Z", "Updated cluster ${update.clusterId} (index $index) height to ${update.normalizedZ} via OSC.")
-                    } else {
-                        Log.w("OSC_CLUSTER_Z", "Received Z for out-of-bounds cluster ID: ${update.clusterId}. Max clusters: ${clusterNormalizedHeights.size}")
                     }
                 }
             }
@@ -570,11 +569,6 @@ fun WFSControlApp() {
             4 -> ClusterMapTab(
                 clusterMarkers = clusterMarkers,
                 onClusterMarkersChanged = { updatedClusterMarkers ->
-                    Log.d("CLUSTER_TAB", "ClusterMapTab received ${updatedClusterMarkers.size} markers")
-                    updatedClusterMarkers.forEach { marker ->
-                        Log.d("CLUSTER_TAB", "Marker ${marker.id}: position (${marker.positionX}, ${marker.positionY})")
-                    }
-                    
                     // Only update state if there are actual changes (not just initial layout)
                     val hasChanges = updatedClusterMarkers.any { updatedMarker ->
                         val currentMarker = clusterMarkers.find { it.id == updatedMarker.id }
@@ -584,12 +578,9 @@ fun WFSControlApp() {
                     }
                     
                     if (hasChanges) {
-                        Log.d("CLUSTER_TAB", "Updating cluster markers state due to changes")
                         clusterMarkers = updatedClusterMarkers
                         // Update service with new cluster marker states
                         viewModel?.syncClusterMarkers(updatedClusterMarkers)
-                    } else {
-                        Log.d("CLUSTER_TAB", "No changes detected, skipping state update")
                     }
                 },
                 onCanvasSizeChanged = { width, height ->
