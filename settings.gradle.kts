@@ -19,6 +19,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "WFS_control_2"
+rootProject.name = "WFS Control"
 include(":app")
  
