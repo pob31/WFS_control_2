@@ -12,8 +12,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -25,6 +27,13 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.collections.set
+import kotlin.math.atan2
+import kotlin.math.sqrt
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
 
 @SuppressLint("UnusedBoxWithConstraintsScope")
 @Composable
@@ -44,6 +53,16 @@ fun ClusterMapTab(
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() } // <Pointer.id.value, ClusterMarker.id>
     val currentOnMarkersChanged by rememberUpdatedState(onClusterMarkersChanged)
     val currentMarkersState by rememberUpdatedState(clusterMarkers)
+    
+    // Vector control state for secondary touches
+    data class VectorControl(
+        val markerId: Int,
+        val initialMarkerPosition: Offset,
+        val initialTouchPosition: Offset,
+        val currentTouchPosition: Offset
+    )
+    val vectorControls = remember { mutableStateMapOf<Long, VectorControl>() }
+    var vectorControlsUpdateTrigger: Int by remember { mutableStateOf(0) }
     // Calculate responsive marker radius
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
@@ -157,6 +176,7 @@ fun ClusterMapTab(
                 awaitEachGesture {
                     val pointerIdToCurrentLogicalPosition = mutableMapOf<PointerId, Offset>()
                     val pointersThatAttemptedGrab = mutableSetOf<PointerId>()
+                    
                     while (true) {
                         val event = awaitPointerEvent()
                         var positionsChangedInThisEvent = false
@@ -166,7 +186,36 @@ fun ClusterMapTab(
                             val pointerValue = change.id.value
                             if (change.pressed) {
                                 if (!draggingMarkers.containsKey(pointerValue)) {
-                                    if (!pointersThatAttemptedGrab.contains(pointerId)) {
+                                    // Check if this pointer has a vector control first
+                                    if (vectorControls.containsKey(pointerValue)) {
+                                        // Handle secondary finger movement
+                                        val vectorControl = vectorControls[pointerValue]
+                                        if (vectorControl != null) {
+                                            // Update the current touch position
+                                            val updatedVectorControl = vectorControl.copy(currentTouchPosition = change.position)
+                                            vectorControls[pointerValue] = updatedVectorControl
+                                            vectorControlsUpdateTrigger++ // Trigger recomposition
+                                            
+                                            // Calculate angle and distance changes
+                                            val currentMarker = currentMarkersState.find { it.id == vectorControl.markerId }
+                                            if (currentMarker != null && initialLayoutDone) {
+                                                val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                val currentAngle = calculateAngle(currentMarker.position, change.position)
+                                                val angleChange = currentAngle - initialAngle
+                                                
+                                                // Send OSC messages asynchronously
+                                                CoroutineScope(Dispatchers.IO).launch {
+                                                    val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                    val currentDistance = calculateDistance(currentMarker.position, change.position)
+                                                    val distanceRatio = if (initialDistance > 0f) currentDistance / initialDistance else 1.0f
+                                                    
+                                                    sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
+                                                    sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+                                                }
+                                            }
+                                            change.consume()
+                                        }
+                                    } else if (!pointersThatAttemptedGrab.contains(pointerId)) {
                                         pointersThatAttemptedGrab.add(pointerId)
                                         val touchPosition = change.position
                                         val candidateMarkers =
@@ -192,6 +241,38 @@ fun ClusterMapTab(
                                                     draggingMarkers[pointerValue] = it.id
                                                     pointerIdToCurrentLogicalPosition[pointerId] =
                                                         it.position
+                                                }
+                                            }
+                                        } else {
+                                            // No marker in pickup range - check for vector control
+                                            val draggedMarkers = draggingMarkers.values.toSet()
+                                            val markersWithVectorControl = vectorControls.values.map { it.markerId }.toSet()
+                                            val availableMarkers = draggedMarkers - markersWithVectorControl
+                                            
+                                            if (availableMarkers.isNotEmpty()) {
+                                                // Find the closest dragged marker without vector control
+                                                val closestMarkerId = availableMarkers.minByOrNull { markerId ->
+                                                    val marker = currentMarkersState.find { it.id == markerId }
+                                                    marker?.let { distance(touchPosition, it.position) } ?: Float.MAX_VALUE
+                                                }
+                                                
+                                                closestMarkerId?.let { markerId ->
+                                                    val marker = currentMarkersState.find { it.id == markerId }
+                                                    marker?.let {
+                                                        vectorControls[pointerValue] = VectorControl(
+                                                            markerId = markerId,
+                                                            initialMarkerPosition = it.position,
+                                                            initialTouchPosition = touchPosition,
+                                                            currentTouchPosition = touchPosition
+                                                        )
+                                                        vectorControlsUpdateTrigger++ // Trigger recomposition
+                                                        
+                                                        // Send initial OSC messages for secondary touch asynchronously
+                                                        CoroutineScope(Dispatchers.IO).launch {
+                                                            sendOscClusterRotation(context, markerId, 0.0f)
+                                                            sendOscClusterScale(context, markerId, 1.0f)
+                                                        }
+                                                    }
                                                 }
                                             }
                                         }
@@ -225,14 +306,35 @@ fun ClusterMapTab(
                                                     markerToMove.copy(positionX = newLogicalPosition.x, positionY = newLogicalPosition.y)
                                                 nextMarkersList[markerIndex] = updatedMarker
                                                 positionsChangedInThisEvent = true
+                                                
+                                                // Send OSC messages asynchronously to avoid blocking UI
                                                 if (initialLayoutDone) {
-                                                    sendOscPosition(
-                                                        context,
-                                                        updatedMarker.id,
-                                                        updatedMarker.position.x,
-                                                        updatedMarker.position.y,
-                                                        true
-                                                    )
+                                                    CoroutineScope(Dispatchers.IO).launch {
+                                                        // Send position OSC
+                                                        sendOscPosition(
+                                                            context,
+                                                            updatedMarker.id,
+                                                            updatedMarker.position.x,
+                                                            updatedMarker.position.y,
+                                                            true
+                                                        )
+                                                        
+                                                        // Check if this marker has vector control and send rotation/scale OSC
+                                                        vectorControls.values.forEach { vectorControl ->
+                                                            if (vectorControl.markerId == updatedMarker.id) {
+                                                                val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                                val currentAngle = calculateAngle(updatedMarker.position, vectorControl.currentTouchPosition)
+                                                                val angleChange = currentAngle - initialAngle
+                                                                
+                                                                val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                                val currentDistance = calculateDistance(updatedMarker.position, vectorControl.currentTouchPosition)
+                                                                val distanceRatio = if (initialDistance > 0f) currentDistance / initialDistance else 1.0f
+                                                                
+                                                                sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
+                                                                sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+                                                            }
+                                                        }
+                                                    }
                                                 }
                                                 change.consume()
                                             }
@@ -243,6 +345,13 @@ fun ClusterMapTab(
                                 if (draggingMarkers.containsKey(pointerValue)) {
                                     val releasedMarkerId = draggingMarkers.remove(pointerValue)!!
                                     pointerIdToCurrentLogicalPosition.remove(pointerId)
+                                    
+                                    // Clean up any vector controls associated with this marker
+                                    vectorControls.entries.removeAll { (_, vectorControl) ->
+                                        vectorControl.markerId == releasedMarkerId
+                                    }
+                                    vectorControlsUpdateTrigger++ // Trigger recomposition
+                                    
                                     val markerForOsc =
                                         nextMarkersList.find { it.id == releasedMarkerId }
                                     if (markerForOsc != null) {
@@ -256,6 +365,10 @@ fun ClusterMapTab(
                                             )
                                         }
                                     }
+                                } else if (vectorControls.containsKey(pointerValue)) {
+                                    // Remove vector control when secondary touch is released
+                                    vectorControls.remove(pointerValue)
+                                    vectorControlsUpdateTrigger++ // Trigger recomposition
                                 }
                                 pointersThatAttemptedGrab.remove(pointerId)
                                 change.consume()
@@ -275,6 +388,33 @@ fun ClusterMapTab(
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
             drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
             drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
+            
+            // Draw vector control lines
+            vectorControls.values.forEach { vectorControl ->
+                val currentMarker = currentMarkersState.find { it.id == vectorControl.markerId }
+                if (currentMarker != null) {
+                    // Calculate initial vector (from initial marker position to initial touch position)
+                    val initialVector = vectorControl.initialTouchPosition - vectorControl.initialMarkerPosition
+                    
+                    // Draw grey reference line: same length and direction as initial vector, translated to current marker position
+                    val greyLineEnd = currentMarker.position + initialVector
+                    drawLine(
+                        color = Color.Gray,
+                        start = currentMarker.position,
+                        end = greyLineEnd,
+                        strokeWidth = 2f
+                    )
+                    
+                    // Draw white active line (current marker position to current touch position)
+                    drawLine(
+                        color = Color.White,
+                        start = currentMarker.position,
+                        end = vectorControl.currentTouchPosition,
+                        strokeWidth = 2f
+                    )
+                }
+            }
+            
             clusterMarkers.sortedByDescending { it.id }.forEach { clusterMarker ->
                 drawMarker(clusterMarker, draggingMarkers.containsValue(clusterMarker.id), textPaint, true, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight)
             }
