@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -29,8 +30,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -63,6 +66,7 @@ fun NetworkTab(
     onNetworkParametersChanged: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
+    val focusManager = LocalFocusManager.current
     var incomingPort by remember { mutableStateOf("") }
     var outgoingPort by remember { mutableStateOf("") }
     var ipAddress by remember { mutableStateOf("") }
@@ -137,7 +141,13 @@ fun NetworkTab(
             label = { Text("Incoming Port") },
             textStyle = textStyle,
             colors = textFieldColors,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             modifier = Modifier.fillMaxWidth(0.8f),
             isError = incomingPortError,
             supportingText = {
@@ -154,7 +164,13 @@ fun NetworkTab(
             label = { Text("Outgoing Port") },
             textStyle = textStyle,
             colors = textFieldColors,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Next
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             modifier = Modifier.fillMaxWidth(0.8f),
             isError = outgoingPortError,
             supportingText = {
@@ -171,7 +187,13 @@ fun NetworkTab(
             label = { Text("IP Address (IPv4)") },
             textStyle = textStyle,
             colors = textFieldColors,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = { focusManager.clearFocus() }
+            ),
             modifier = Modifier.fillMaxWidth(0.8f),
             isError = ipAddressError,
             supportingText = {

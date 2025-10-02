@@ -139,8 +139,8 @@ fun sendOscArrayAdjustCommand(context: Context, oscAddress: String, arrayId: Int
     }
 }
 
-fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
-    android.util.Log.d("OSC", "sendOscMarkerOrientation called: markerId=$markerId, angle=$angle")
+fun sendOscMarkerAngleChange(context: Context, markerId: Int, modeNumber: Int, angleChange: Float) {
+    android.util.Log.d("OSC", "sendOscMarkerAngleChange called: markerId=$markerId, modeNumber=$modeNumber, angleChange=$angleChange")
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -153,14 +153,15 @@ fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
                 return@launch
             }
 
-            val addressPattern = "/marker/orientation"
+            val addressPattern = "/marker/angleChange"
             val addressPatternBytes = getPaddedBytes(addressPattern)
-            // Type tag for two integers (markerId, angle)
-            val typeTagBytes = getPaddedBytes(",ii")
+            // Type tag for integer, integer, float (markerId, modeNumber, angleChange)
+            val typeTagBytes = getPaddedBytes(",iif")
             val markerIdBytes = markerId.toBytesBigEndian()
-            val angleBytes = angle.toBytesBigEndian()
+            val modeNumberBytes = modeNumber.toBytesBigEndian()
+            val angleChangeBytes = angleChange.toBytesBigEndian()
 
-            val oscPacketBytes = addressPatternBytes + typeTagBytes + markerIdBytes + angleBytes
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + markerIdBytes + modeNumberBytes + angleChangeBytes
 
             DatagramSocket().use { socket ->
                 val inetAddress = InetAddress.getByName(ipAddressStr)
@@ -173,8 +174,8 @@ fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
     }
 }
 
-fun sendOscMarkerDirectivity(context: Context, markerId: Int, directivity: Float) {
-    android.util.Log.d("OSC", "sendOscMarkerDirectivity called: markerId=$markerId, directivity=$directivity")
+fun sendOscMarkerRadialChange(context: Context, markerId: Int, modeNumber: Int, radialChange: Float) {
+    android.util.Log.d("OSC", "sendOscMarkerRadialChange called: markerId=$markerId, modeNumber=$modeNumber, radialChange=$radialChange")
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -187,14 +188,15 @@ fun sendOscMarkerDirectivity(context: Context, markerId: Int, directivity: Float
                 return@launch
             }
 
-            val addressPattern = "/marker/directivity"
+            val addressPattern = "/marker/radialChange"
             val addressPatternBytes = getPaddedBytes(addressPattern)
-            // Type tag for integer and float (markerId, directivity)
-            val typeTagBytes = getPaddedBytes(",if")
+            // Type tag for integer, integer, float (markerId, modeNumber, radialChange)
+            val typeTagBytes = getPaddedBytes(",iif")
             val markerIdBytes = markerId.toBytesBigEndian()
-            val directivityBytes = directivity.toBytesBigEndian()
+            val modeNumberBytes = modeNumber.toBytesBigEndian()
+            val radialChangeBytes = radialChange.toBytesBigEndian()
 
-            val oscPacketBytes = addressPatternBytes + typeTagBytes + markerIdBytes + directivityBytes
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + markerIdBytes + modeNumberBytes + radialChangeBytes
 
             DatagramSocket().use { socket ->
                 val inetAddress = InetAddress.getByName(ipAddressStr)

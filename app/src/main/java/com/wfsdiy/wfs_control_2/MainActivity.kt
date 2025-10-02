@@ -50,9 +50,25 @@ internal const val KEY_IP_ADDRESS = "ip_address"
 internal const val KEY_NUMBER_OF_INPUTS = "number_of_inputs"
 internal const val KEY_LOCK_STATES = "lock_states"
 internal const val KEY_VISIBILITY_STATES = "visibility_states"
+internal const val KEY_SECONDARY_TOUCH_MODE = "secondary_touch_mode"
 
 // Maximum number of inputs the system can handle
 internal const val MAX_INPUTS = 64
+
+enum class SecondaryTouchMode(val modeNumber: Int, val displayName: String) {
+    ATTENUATION_DELAY(0, "Attenuation / Delay-Latency compensation"),
+    DISTANCE_ATTENUATION_COMMON(1, "Distance attenuation / Common attenuation"),
+    DISTANCE_RATIO_COMMON(2, "Distance ratio / Common attenuation"),
+    ORIENTATION_TILT(3, "Orientation / Tilt"),
+    DIRECTIVITY_HF_SHELF(4, "Directivity / HF shelf"),
+    LIVE_SOURCE_RADIUS_FIXED(5, "Live source Radius / Fixed attenuation"),
+    LIVE_SOURCE_FAST_COMPRESSOR(6, "Live source Fast compressor Ratio / Threshold"),
+    LIVE_SOURCE_SLOW_COMPRESSOR(7, "Live source Slow compressor Ratio / Threshold"),
+    FLOOR_REFLECTIONS_DIFFUSION(8, "Floor reflections Diffusion / Attenuation"),
+    LFO_PHASE_PERIOD(9, "LFO Phase / Period"),
+    LFO_X_RATE_AMPLITUDE(10, "LFO X Rate / Amplitude"),
+    LFO_Y_RATE_AMPLITUDE(11, "LFO Y Rate / Amplitude")
+}
 
 // Define the Marker data class
 @Parcelize
@@ -148,6 +164,20 @@ fun loadAppSettings(context: Context): Triple<Int, List<Boolean>, List<Boolean>>
     return Triple(numberOfInputs, lockStates, visibilityStates)
 }
 
+fun saveSecondaryTouchMode(context: Context, mode: SecondaryTouchMode) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putInt(KEY_SECONDARY_TOUCH_MODE, mode.modeNumber)
+        apply()
+    }
+}
+
+fun loadSecondaryTouchMode(context: Context): SecondaryTouchMode {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val modeNumber = sharedPrefs.getInt(KEY_SECONDARY_TOUCH_MODE, 0)
+    return SecondaryTouchMode.values().find { it.modeNumber == modeNumber } ?: SecondaryTouchMode.ATTENUATION_DELAY
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -228,6 +258,7 @@ fun WFSControlApp() {
     val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(7.5f, 17.5f)
     val markerRadiusPx = responsiveMarkerRadius.dpToPx()
     var numberOfInputs by rememberSaveable { mutableStateOf(MAX_INPUTS) }
+    var secondaryTouchMode by rememberSaveable { mutableStateOf(SecondaryTouchMode.ATTENUATION_DELAY) }
     
     // Screen dimensions for OSC operations
     var screenWidthPx by remember { mutableStateOf(0f) }
@@ -346,6 +377,7 @@ fun WFSControlApp() {
         
         val (loadedInputs, loadedLockStates, loadedVisibilityStates) = loadAppSettings(context)
         numberOfInputs = loadedInputs
+        secondaryTouchMode = loadSecondaryTouchMode(context)
         markers = markers.mapIndexed { index, marker ->
             marker.copy(
                 isLocked = loadedLockStates.getOrElse(index) { false },
@@ -553,7 +585,8 @@ fun WFSControlApp() {
                     stageWidth = stageWidth,
                 stageDepth = stageDepth,
                 stageOriginX = stageOriginX,
-                stageOriginY = stageOriginY
+                stageOriginY = stageOriginY,
+                secondaryTouchMode = secondaryTouchMode
                 )
                 1 -> LockingTab(
                     numberOfInputs = numberOfInputs,
@@ -623,6 +656,11 @@ fun WFSControlApp() {
                 onNetworkParametersChanged = {
                     // Update service network parameters when settings change
                     oscService?.updateNetworkParameters()
+                },
+                secondaryTouchMode = secondaryTouchMode,
+                onSecondaryTouchModeChanged = { newMode ->
+                    secondaryTouchMode = newMode
+                    saveSecondaryTouchMode(context, newMode)
                 }
             )
         }

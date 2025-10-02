@@ -13,6 +13,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.input.pointer.positionChanged
@@ -129,7 +130,8 @@ fun InputMapTab(
     stageWidth: Float,
     stageDepth: Float,
     stageOriginX: Float,
-    stageOriginY: Float
+    stageOriginY: Float,
+    secondaryTouchMode: SecondaryTouchMode = SecondaryTouchMode.ATTENUATION_DELAY
 ) {
     val context = LocalContext.current
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() }
@@ -275,8 +277,8 @@ fun InputMapTab(
                                                         val currentDistance = calculateDistance(currentMarkerPosition, change.position)
                                                         val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
                                                         
-                                                        sendOscMarkerOrientation(context, vectorControl.markerId, ((angleChange.toInt() + 360) % 360))
-                                                        sendOscMarkerDirectivity(context, vectorControl.markerId, distanceChange)
+                                                        sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
+                                                        sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
                                                     }
                                                 }
                                             }
@@ -335,8 +337,8 @@ fun InputMapTab(
                                                         
                                                         // Send initial OSC messages for secondary touch asynchronously
                                                         CoroutineScope(Dispatchers.IO).launch {
-                                                            sendOscMarkerOrientation(context, markerId, 0)
-                                                            sendOscMarkerDirectivity(context, markerId, 0.0f)
+                                                            sendOscMarkerAngleChange(context, markerId, secondaryTouchMode.modeNumber, 0f)
+                                                            sendOscMarkerRadialChange(context, markerId, secondaryTouchMode.modeNumber, 0.0f)
                                                         }
                                                     }
                                                 }
@@ -397,8 +399,8 @@ fun InputMapTab(
                                                                     val currentDistance = calculateDistance(currentMarkerPosition, vectorControl.currentTouchPosition)
                                                                     val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
                                                                     
-                                                                    sendOscMarkerOrientation(context, vectorControl.markerId, ((angleChange.toInt() + 360) % 360))
-                                                                    sendOscMarkerDirectivity(context, vectorControl.markerId, distanceChange)
+                                                                    sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
+                                                                    sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
                                                                 }
                                                             }
                                                         }
@@ -445,6 +447,24 @@ fun InputMapTab(
             }
         ) { // DrawScope
             drawRect(Color.Black) // Background for the canvas
+            
+            // Draw secondary touch mode name above the grid
+            val labelText = "Secondary touch functions (angular / radial)"
+            val modeText = secondaryTouchMode.displayName
+            val fullText = "$labelText\n$modeText"
+            
+            val textPaint = Paint().apply {
+                color = android.graphics.Color.WHITE
+                textSize = 20f
+                textAlign = Paint.Align.CENTER
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+            drawContext.canvas.nativeCanvas.drawText(
+                fullText,
+                canvasWidth / 2f,
+                50f, // Position above the grid
+                textPaint
+            )
             
             // Draw the stage grid lines (bottom-center origin)
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
