@@ -121,6 +121,10 @@ fun InputParametersTab() {
     var standardSliderHValue by remember { mutableStateOf(0f) } // 0f to 1f
     var standardSliderVValue by remember { mutableStateOf(0f) } // 0f to 1f
 
+    var basicDialValue by remember { mutableStateOf(0f) } // 0f to 1f
+    var basicDialDisplayedValue by remember { mutableStateOf("0.0") }
+    var angleDialValue by remember { mutableStateOf(0f) } // -180° to +180°
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -256,6 +260,52 @@ fun InputParametersTab() {
             trackBackgroundColor = Color.DarkGray,
             orientation = SliderOrientation.VERTICAL,
             hideThumbOnRelease = false // Thumb always visible
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = spacing.largeSpacing))
+
+        // Basic Dial Section
+        Text("Basic Dial Output:", fontSize = textSizes.headerSize, color = Color.White)
+        Text(
+            text = "Dial Value: ${String.format("%.2f", basicDialValue)}",
+            fontSize = textSizes.bodySize,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(spacing.smallSpacing))
+        BasicDial(
+            value = basicDialValue,
+            onValueChange = { basicDialValue = it },
+            dialColor = Color.DarkGray,
+            indicatorColor = Color.White,
+            trackColor = Color(0xFF00BCD4), // Cyanish
+            displayedValue = basicDialDisplayedValue,
+            valueUnit = "%",
+            isValueEditable = true,
+            onDisplayedValueChange = { basicDialDisplayedValue = it },
+            valueTextColor = Color.White,
+            enabled = true
+        )
+
+        HorizontalDivider(modifier = Modifier.padding(vertical = spacing.largeSpacing))
+
+        // Angle Dial Section
+        Text("Angle Dial Output:", fontSize = textSizes.headerSize, color = Color.White)
+        Text(
+            text = "Angle Value: ${String.format("%.1f", angleDialValue)}°",
+            fontSize = textSizes.bodySize,
+            color = Color.White
+        )
+        Spacer(modifier = Modifier.height(spacing.smallSpacing))
+        AngleDial(
+            value = angleDialValue,
+            onValueChange = { angleDialValue = it },
+            dialColor = Color.DarkGray,
+            indicatorColor = Color.White,
+            trackColor = Color(0xFF4CAF50), // Green
+            isValueEditable = true,
+            onDisplayedValueChange = { }, // Not used anymore
+            valueTextColor = Color.White,
+            enabled = true
         )
     }
 }
