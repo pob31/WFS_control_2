@@ -51,11 +51,13 @@ internal const val KEY_NUMBER_OF_INPUTS = "number_of_inputs"
 internal const val KEY_LOCK_STATES = "lock_states"
 internal const val KEY_VISIBILITY_STATES = "visibility_states"
 internal const val KEY_SECONDARY_TOUCH_MODE = "secondary_touch_mode"
+internal const val KEY_CLUSTER_SECONDARY_TOUCH_ENABLED = "cluster_secondary_touch_enabled"
 
 // Maximum number of inputs the system can handle
 internal const val MAX_INPUTS = 64
 
 enum class SecondaryTouchMode(val modeNumber: Int, val displayName: String) {
+    DISABLED(-1, "Disabled"),
     ATTENUATION_DELAY(0, "Attenuation / Delay-Latency compensation"),
     DISTANCE_ATTENUATION_COMMON(1, "Distance attenuation / Common attenuation"),
     DISTANCE_RATIO_COMMON(2, "Distance ratio / Common attenuation"),
@@ -174,8 +176,21 @@ fun saveSecondaryTouchMode(context: Context, mode: SecondaryTouchMode) {
 
 fun loadSecondaryTouchMode(context: Context): SecondaryTouchMode {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    val modeNumber = sharedPrefs.getInt(KEY_SECONDARY_TOUCH_MODE, 0)
-    return SecondaryTouchMode.values().find { it.modeNumber == modeNumber } ?: SecondaryTouchMode.ATTENUATION_DELAY
+    val modeNumber = sharedPrefs.getInt(KEY_SECONDARY_TOUCH_MODE, -1) // Default to DISABLED
+    return SecondaryTouchMode.values().find { it.modeNumber == modeNumber } ?: SecondaryTouchMode.DISABLED
+}
+
+fun saveClusterSecondaryTouchEnabled(context: Context, enabled: Boolean) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putBoolean(KEY_CLUSTER_SECONDARY_TOUCH_ENABLED, enabled)
+        apply()
+    }
+}
+
+fun loadClusterSecondaryTouchEnabled(context: Context): Boolean {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_TOUCH_ENABLED, true) // Default to enabled
 }
 
 class MainActivity : ComponentActivity() {
@@ -259,6 +274,7 @@ fun WFSControlApp() {
     val markerRadiusPx = responsiveMarkerRadius.dpToPx()
     var numberOfInputs by rememberSaveable { mutableStateOf(MAX_INPUTS) }
     var secondaryTouchMode by rememberSaveable { mutableStateOf(SecondaryTouchMode.ATTENUATION_DELAY) }
+    var clusterSecondaryTouchEnabled by rememberSaveable { mutableStateOf(true) }
     
     // Screen dimensions for OSC operations
     var screenWidthPx by remember { mutableStateOf(0f) }
@@ -378,6 +394,7 @@ fun WFSControlApp() {
         val (loadedInputs, loadedLockStates, loadedVisibilityStates) = loadAppSettings(context)
         numberOfInputs = loadedInputs
         secondaryTouchMode = loadSecondaryTouchMode(context)
+        clusterSecondaryTouchEnabled = loadClusterSecondaryTouchEnabled(context)
         markers = markers.mapIndexed { index, marker ->
             marker.copy(
                 isLocked = loadedLockStates.getOrElse(index) { false },
@@ -636,6 +653,7 @@ fun WFSControlApp() {
                 stageDepth = stageDepth,
                 stageOriginX = stageOriginX,
                 stageOriginY = stageOriginY,
+                clusterSecondaryTouchEnabled = clusterSecondaryTouchEnabled,
                 viewModel = viewModel
                 )
                 5 -> ClusterHeightTab(
@@ -661,6 +679,11 @@ fun WFSControlApp() {
                 onSecondaryTouchModeChanged = { newMode ->
                     secondaryTouchMode = newMode
                     saveSecondaryTouchMode(context, newMode)
+                },
+                clusterSecondaryTouchEnabled = clusterSecondaryTouchEnabled,
+                onClusterSecondaryTouchEnabledChanged = { enabled ->
+                    clusterSecondaryTouchEnabled = enabled
+                    saveClusterSecondaryTouchEnabled(context, enabled)
                 }
             )
         }

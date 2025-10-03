@@ -30,7 +30,9 @@ fun SettingsTab(
     onResetToDefaults: () -> Unit,
     onNetworkParametersChanged: (() -> Unit)? = null,
     secondaryTouchMode: SecondaryTouchMode = SecondaryTouchMode.ATTENUATION_DELAY,
-    onSecondaryTouchModeChanged: (SecondaryTouchMode) -> Unit = {}
+    onSecondaryTouchModeChanged: (SecondaryTouchMode) -> Unit = {},
+    clusterSecondaryTouchEnabled: Boolean = true,
+    onClusterSecondaryTouchEnabledChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showDialog by remember { mutableStateOf(false) }
@@ -64,60 +66,82 @@ fun SettingsTab(
             .padding(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Secondary Touch Functions Dropdown
+        // Secondary Touch Functions Section
         Text(
-            "Secondary touch functions (angular / radial)",
+            "Secondary touch functions",
             style = MaterialTheme.typography.headlineSmall.copy(color = Color.White),
             modifier = Modifier.padding(bottom = 8.dp)
         )
         
-        var expanded by remember { mutableStateOf(false) }
-        
-        ExposedDropdownMenuBox(
-            expanded = expanded,
-            onExpandedChange = { expanded = !expanded },
-            modifier = Modifier.fillMaxWidth(0.8f)
+        Row(
+            modifier = Modifier.fillMaxWidth(0.8f),
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            OutlinedTextField(
-                value = secondaryTouchMode.displayName,
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Select Mode") },
-                trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
-                modifier = Modifier
-                    .menuAnchor()
-                    .fillMaxWidth(),
-                colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
-                    focusedTextColor = Color.White,
-                    unfocusedTextColor = Color.White,
-                    focusedLabelColor = Color.White,
-                    unfocusedLabelColor = Color.LightGray,
-                    focusedBorderColor = Color.White,
-                    unfocusedBorderColor = Color.LightGray
-                ),
-                textStyle = TextStyle(color = Color.White, fontSize = 16.sp)
-            )
+            var expanded by remember { mutableStateOf(false) }
             
-            ExposedDropdownMenu(
+            ExposedDropdownMenuBox(
                 expanded = expanded,
-                onDismissRequest = { expanded = false },
-                modifier = Modifier.background(Color.DarkGray)
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.weight(1f)
             ) {
-                SecondaryTouchMode.values().forEach { mode ->
-                    DropdownMenuItem(
-                        text = { 
-                            Text(
-                                mode.displayName,
-                                color = Color.White,
-                                fontSize = 14.sp
-                            ) 
-                        },
-                        onClick = {
-                            onSecondaryTouchModeChanged(mode)
-                            expanded = false
-                        },
-                    )
+                OutlinedTextField(
+                    value = secondaryTouchMode.displayName,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text("Input Map - Select Mode") },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    modifier = Modifier
+                        .menuAnchor()
+                        .fillMaxWidth(),
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
+                        focusedTextColor = Color.White,
+                        unfocusedTextColor = Color.White,
+                        focusedLabelColor = Color.White,
+                        unfocusedLabelColor = Color.LightGray,
+                        focusedBorderColor = Color.White,
+                        unfocusedBorderColor = Color.LightGray
+                    ),
+                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp)
+                )
+                
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false },
+                    modifier = Modifier.background(Color.DarkGray)
+                ) {
+                    SecondaryTouchMode.values().forEach { mode ->
+                        DropdownMenuItem(
+                            text = { 
+                                Text(
+                                    mode.displayName,
+                                    color = Color.White,
+                                    fontSize = 14.sp
+                                ) 
+                            },
+                            onClick = {
+                                onSecondaryTouchModeChanged(mode)
+                                expanded = false
+                            },
+                        )
+                    }
                 }
+            }
+            
+            // Cluster Secondary Touch Enable/Disable Button
+            Button(
+                onClick = { onClusterSecondaryTouchEnabledChanged(!clusterSecondaryTouchEnabled) },
+                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                    containerColor = if (clusterSecondaryTouchEnabled) Color(0xFF2E7D32) else Color.Red
+                ),
+                modifier = Modifier.width(120.dp)
+            ) {
+                Text(
+                    if (clusterSecondaryTouchEnabled) "Cluster Enabled" else "Cluster Disabled",
+                    color = Color.White,
+                    fontSize = 16.sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
             }
         }
 

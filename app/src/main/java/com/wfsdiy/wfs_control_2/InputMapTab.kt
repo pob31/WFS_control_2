@@ -167,6 +167,14 @@ fun InputMapTab(
             // textSize will be set in drawMarker based on marker.isVisible and zoom
         }
     }
+    
+    // Clear vector controls when secondary touch mode is disabled
+    LaunchedEffect(secondaryTouchMode) {
+        if (secondaryTouchMode == SecondaryTouchMode.DISABLED) {
+            vectorControls.clear()
+            vectorControlsUpdateTrigger++
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val canvasWidth = constraints.maxWidth.toFloat()
@@ -258,8 +266,8 @@ fun InputMapTab(
                                             vectorControls[pointerValue] = updatedVectorControl
                                             vectorControlsUpdateTrigger++ // Trigger recomposition
                                             
-                                            // Calculate and send OSC messages asynchronously
-                                            if (initialLayoutDone) {
+                                            // Calculate and send OSC messages asynchronously only if not disabled
+                                            if (initialLayoutDone && secondaryTouchMode != SecondaryTouchMode.DISABLED) {
                                                 CoroutineScope(Dispatchers.IO).launch {
                                                     // Use local position if available, otherwise use global position
                                                     val currentMarkerPosition = if (localMarkerPositions.containsKey(vectorControl.markerId)) {
@@ -312,33 +320,35 @@ fun InputMapTab(
                                                 }
                                             }
                                         } else {
-                                            // No marker in pickup range - check for vector control
-                                            val draggedMarkers = draggingMarkers.values.toSet()
-                                            val markersWithVectorControl = vectorControls.values.map { it.markerId }.toSet()
-                                            val availableMarkers = draggedMarkers - markersWithVectorControl
-                                            
-                                            if (availableMarkers.isNotEmpty()) {
-                                                // Find the closest dragged marker without vector control
-                                                val closestMarkerId = availableMarkers.minByOrNull { markerId ->
-                                                    val marker = currentMarkersState.find { it.id == markerId }
-                                                    marker?.let { distance(touchPosition, it.position) } ?: Float.MAX_VALUE
-                                                }
+                                            // No marker in pickup range - check for vector control only if secondary touch is not disabled
+                                            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+                                                val draggedMarkers = draggingMarkers.values.toSet()
+                                                val markersWithVectorControl = vectorControls.values.map { it.markerId }.toSet()
+                                                val availableMarkers = draggedMarkers - markersWithVectorControl
                                                 
-                                                closestMarkerId?.let { markerId ->
-                                                    val marker = currentMarkersState.find { it.id == markerId }
-                                                    marker?.let {
-                                                        vectorControls[pointerValue] = VectorControl(
-                                                            markerId = markerId,
-                                                            initialMarkerPosition = it.position,
-                                                            initialTouchPosition = touchPosition,
-                                                            currentTouchPosition = touchPosition
-                                                        )
-                                                        vectorControlsUpdateTrigger++ // Trigger recomposition
-                                                        
-                                                        // Send initial OSC messages for secondary touch asynchronously
-                                                        CoroutineScope(Dispatchers.IO).launch {
-                                                            sendOscMarkerAngleChange(context, markerId, secondaryTouchMode.modeNumber, 0f)
-                                                            sendOscMarkerRadialChange(context, markerId, secondaryTouchMode.modeNumber, 0.0f)
+                                                if (availableMarkers.isNotEmpty()) {
+                                                    // Find the closest dragged marker without vector control
+                                                    val closestMarkerId = availableMarkers.minByOrNull { markerId ->
+                                                        val marker = currentMarkersState.find { it.id == markerId }
+                                                        marker?.let { distance(touchPosition, it.position) } ?: Float.MAX_VALUE
+                                                    }
+                                                    
+                                                    closestMarkerId?.let { markerId ->
+                                                        val marker = currentMarkersState.find { it.id == markerId }
+                                                        marker?.let {
+                                                            vectorControls[pointerValue] = VectorControl(
+                                                                markerId = markerId,
+                                                                initialMarkerPosition = it.position,
+                                                                initialTouchPosition = touchPosition,
+                                                                currentTouchPosition = touchPosition
+                                                            )
+                                                            vectorControlsUpdateTrigger++ // Trigger recomposition
+                                                            
+                                                            // Send initial OSC messages for secondary touch asynchronously
+                                                            CoroutineScope(Dispatchers.IO).launch {
+                                                                sendOscMarkerAngleChange(context, markerId, secondaryTouchMode.modeNumber, 0f)
+                                                                sendOscMarkerRadialChange(context, markerId, secondaryTouchMode.modeNumber, 0.0f)
+                                                            }
                                                         }
                                                     }
                                                 }
@@ -385,22 +395,24 @@ fun InputMapTab(
                                                         CoroutineScope(Dispatchers.IO).launch {
                                                             sendOscPosition(context, updatedMarker.id, updatedMarker.position.x, updatedMarker.position.y, false)
                                                             
-                                                            // Check if this marker has vector control and send orientation/directivity OSC
-                                                            vectorControls.values.forEach { vectorControl ->
-                                                                if (vectorControl.markerId == updatedMarker.id) {
-                                                                    // Use local position for consistent calculations
-                                                                    val currentMarkerPosition = localMarkerPositions[updatedMarker.id] ?: updatedMarker.position
-                                                                    
-                                                                    val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
-                                                                    val currentAngle = calculateAngle(currentMarkerPosition, vectorControl.currentTouchPosition)
-                                                                    val angleChange = currentAngle - initialAngle
-                                                                    
-                                                                    val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
-                                                                    val currentDistance = calculateDistance(currentMarkerPosition, vectorControl.currentTouchPosition)
-                                                                    val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
-                                                                    
-                                                                    sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
-                                                                    sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
+                                                            // Check if this marker has vector control and send orientation/directivity OSC only if not disabled
+                                                            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+                                                                vectorControls.values.forEach { vectorControl ->
+                                                                    if (vectorControl.markerId == updatedMarker.id) {
+                                                                        // Use local position for consistent calculations
+                                                                        val currentMarkerPosition = localMarkerPositions[updatedMarker.id] ?: updatedMarker.position
+                                                                        
+                                                                        val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                                        val currentAngle = calculateAngle(currentMarkerPosition, vectorControl.currentTouchPosition)
+                                                                        val angleChange = currentAngle - initialAngle
+                                                                        
+                                                                        val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
+                                                                        val currentDistance = calculateDistance(currentMarkerPosition, vectorControl.currentTouchPosition)
+                                                                        val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
+                                                                        
+                                                                        sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
+                                                                        sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
+                                                                    }
                                                                 }
                                                             }
                                                         }
@@ -449,13 +461,13 @@ fun InputMapTab(
             drawRect(Color.Black) // Background for the canvas
             
             // Draw secondary touch mode name above the grid
-            val labelText = "Secondary touch functions (angular / radial)"
+            val labelText = "Secondary touch functions (angular / radial): "
             val modeText = secondaryTouchMode.displayName
-            val fullText = "$labelText\n$modeText"
+            val fullText = "$labelText\n\n\n$modeText"
             
             val textPaint = Paint().apply {
                 color = android.graphics.Color.WHITE
-                textSize = 20f
+                textSize = 24f
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
@@ -475,35 +487,37 @@ fun InputMapTab(
             // Draw origin marker at position where displayed coordinates would be (0.0, 0.0)
             drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
 
-            // Draw vector control lines
-            vectorControls.values.forEach { vectorControl ->
-                // Use local position if available, otherwise use global position
-                val currentMarkerPosition = if (localMarkerPositions.containsKey(vectorControl.markerId)) {
-                    localMarkerPositions[vectorControl.markerId]!!
-                } else {
-                    currentMarkersState.find { it.id == vectorControl.markerId }?.position
-                }
-                
-                if (currentMarkerPosition != null) {
-                    // Calculate initial vector (from initial marker position to initial touch position)
-                    val initialVector = vectorControl.initialTouchPosition - vectorControl.initialMarkerPosition
+            // Draw vector control lines only if secondary touch is not disabled
+            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+                vectorControls.values.forEach { vectorControl ->
+                    // Use local position if available, otherwise use global position
+                    val currentMarkerPosition = if (localMarkerPositions.containsKey(vectorControl.markerId)) {
+                        localMarkerPositions[vectorControl.markerId]!!
+                    } else {
+                        currentMarkersState.find { it.id == vectorControl.markerId }?.position
+                    }
                     
-                    // Draw grey reference line: same length and direction as initial vector, translated to current marker position
-                    val greyLineEnd = currentMarkerPosition + initialVector
-                    drawLine(
-                        color = Color.Gray,
-                        start = currentMarkerPosition,
-                        end = greyLineEnd,
-                        strokeWidth = 2f
-                    )
-                    
-                    // Draw white active line (current marker position to current touch position)
-                    drawLine(
-                        color = Color.White,
-                        start = currentMarkerPosition,
-                        end = vectorControl.currentTouchPosition,
-                        strokeWidth = 2f
-                    )
+                    if (currentMarkerPosition != null) {
+                        // Calculate initial vector (from initial marker position to initial touch position)
+                        val initialVector = vectorControl.initialTouchPosition - vectorControl.initialMarkerPosition
+                        
+                        // Draw grey reference line: same length and direction as initial vector, translated to current marker position
+                        val greyLineEnd = currentMarkerPosition + initialVector
+                        drawLine(
+                            color = Color.Gray,
+                            start = currentMarkerPosition,
+                            end = greyLineEnd,
+                            strokeWidth = 2f
+                        )
+                        
+                        // Draw white active line (current marker position to current touch position)
+                        drawLine(
+                            color = Color.White,
+                            start = currentMarkerPosition,
+                            end = vectorControl.currentTouchPosition,
+                            strokeWidth = 2f
+                        )
+                    }
                 }
             }
 
