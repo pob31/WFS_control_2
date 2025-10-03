@@ -19,6 +19,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import kotlin.math.sqrt
 
 // Theme Colors (Placeholders)
 val timeColumnColor = Color(0xFF4A90E2) // Blueish
@@ -29,6 +32,25 @@ val defaultColumnColor = Color.DarkGray
 
 @Composable
 fun ArrayAdjustTab() {
+    // Device detection for responsive sizing
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenWidthDp = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
+    val screenDensity = density.density
+    
+    // Use physical screen size to detect phone vs tablet
+    val physicalWidthInches = screenWidthDp.value / 160f
+    val physicalHeightInches = screenHeightDp.value / 160f
+    val diagonalInches = sqrt(physicalWidthInches * physicalWidthInches + physicalHeightInches * physicalHeightInches)
+    val isPhone = diagonalInches < 6.0f
+    
+    // Responsive sizing
+    val sideColumnWeight = if (isPhone) 0.7f else 0.4f // 30% smaller on phone, 60% smaller on tablet
+    val headerFontSize = if (isPhone) 8.sp else 16.sp // 50% smaller on phone
+    val row2FontSize = if (isPhone) 6.sp else 12.sp // 50% smaller on phone
+    val arrayLabelFontSize = if (isPhone) 7.sp else 14.sp // 50% smaller on phone
+    
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -46,9 +68,10 @@ fun ArrayAdjustTab() {
             // Column 1
             SideColumn(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(sideColumnWeight)
                     .fillMaxHeight(),
-                arrayLabels = List(5) { "Array ${it + 1}" }
+                arrayLabels = List(5) { "Array ${it + 1}" },
+                arrayLabelFontSize = arrayLabelFontSize
             )
 
             VerticalDivider()
@@ -62,7 +85,9 @@ fun ArrayAdjustTab() {
                 row2Labels = Pair("Increase Delay", "Compensate Latency"),
                 row3AndLastLabels = listOf("-1.0s", "-0.1s", "+0.1s", "+1.0s"),
                 themeColor = timeColumnColor,
-                columnIdentifier = "time"
+                columnIdentifier = "time",
+                headerFontSize = headerFontSize,
+                row2FontSize = row2FontSize
             )
 
             VerticalDivider()
@@ -76,7 +101,9 @@ fun ArrayAdjustTab() {
                 row2Labels = Pair("Quieter", "Louder"),
                 row3AndLastLabels = listOf("-1.0dB", "-0.1dB", "+0.1dB", "+1.0dB"),
                 themeColor = levelColumnColor,
-                columnIdentifier = "level"
+                columnIdentifier = "level",
+                headerFontSize = headerFontSize,
+                row2FontSize = row2FontSize
             )
 
             VerticalDivider()
@@ -90,7 +117,9 @@ fun ArrayAdjustTab() {
                 row2Labels = Pair("Bring Closer", "Send Farther"),
                 row3AndLastLabels = listOf("-1.0m", "-0.1m", "+0.1m", "+1.0m"),
                 themeColor = horizontalParallaxColor,
-                columnIdentifier = "h_parallax"
+                columnIdentifier = "h_parallax",
+                headerFontSize = headerFontSize,
+                row2FontSize = row2FontSize
             )
 
             VerticalDivider()
@@ -104,7 +133,9 @@ fun ArrayAdjustTab() {
                 row2Labels = Pair("Lower Speaker", "Raise Speaker"),
                 row3AndLastLabels = listOf("-1.0m", "-0.1m", "+0.1m", "+1.0m"),
                 themeColor = verticalParallaxColor,
-                columnIdentifier = "v_parallax"
+                columnIdentifier = "v_parallax",
+                headerFontSize = headerFontSize,
+                row2FontSize = row2FontSize
             )
 
             VerticalDivider()
@@ -112,9 +143,10 @@ fun ArrayAdjustTab() {
             // Column 6
             SideColumn(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(sideColumnWeight)
                     .fillMaxHeight(),
-                arrayLabels = List(5) { "Array ${it + 1}" }
+                arrayLabels = List(5) { "Array ${it + 1}" },
+                arrayLabelFontSize = arrayLabelFontSize
             )
         }
 
@@ -133,7 +165,7 @@ fun VerticalDivider() {
 }
 
 @Composable
-fun ColumnScope.HeaderCell(text: String, themeColor: Color) {
+fun ColumnScope.HeaderCell(text: String, themeColor: Color, fontSize: TextUnit = 16.sp) {
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -142,7 +174,7 @@ fun ColumnScope.HeaderCell(text: String, themeColor: Color) {
             .padding(vertical = 4.dp, horizontal = 2.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center, lineHeight = 18.sp)
+        Text(text, fontSize = fontSize, fontWeight = FontWeight.Bold, color = Color.White, textAlign = TextAlign.Center, lineHeight = fontSize * 1.125f)
     }
 }
 
@@ -200,8 +232,6 @@ fun ButtonCell(
                 "h_parallax" -> "/arrayAdjust/Hparallax"
                 "v_parallax" -> "/arrayAdjust/Vparallax"
                 else -> {
-                    // Log an error or handle unexpected columnIdentifier
-                    println("Error: Unknown columnIdentifier for OSC: $columnIdentifier")
                     return@Button // Don't send an OSC message
                 }
             }
@@ -212,20 +242,20 @@ fun ButtonCell(
                 2 -> 0.1f
                 3 -> 1.0f
                 else -> {
-                    // Log an error or handle unexpected buttonIndexInRow
-                    println("Error: Unknown buttonIndexInRow for OSC value: $buttonIndexInRow")
                     return@Button // Don't send an OSC message
                 }
             }
 
             // Call the function from MainActivity.kt (assuming it's accessible)
             sendOscArrayAdjustCommand(context, oscAddressPath, arrayNumber, valueToSend)
-            // println("OSC: Array ${arrayNumber}, Col: $columnIdentifier, Button: ${buttonIndexInRow +1} clicked") // Placeholder removed
         },
         modifier = Modifier
             .fillMaxSize() // Fills the parent Box
             .padding(1.dp),
-        colors = ButtonDefaults.buttonColors(containerColor = themeColor.copy(alpha = 0.6f)),
+        colors = ButtonDefaults.buttonColors(
+            containerColor = themeColor.copy(alpha = 0.6f),
+            contentColor = Color.White
+        ),
         contentPadding = PaddingValues(0.dp) // Minimal padding for small buttons
     ) {
         Text("") // Buttons are plain colored cells
@@ -233,7 +263,7 @@ fun ButtonCell(
 }
 
 @Composable
-fun SideColumn(modifier: Modifier = Modifier, arrayLabels: List<String>) {
+fun SideColumn(modifier: Modifier = Modifier, arrayLabels: List<String>, arrayLabelFontSize: TextUnit = 14.sp) {
     Column(
         modifier = modifier
             .background(defaultColumnColor.copy(alpha = 0.1f))
@@ -252,7 +282,7 @@ fun SideColumn(modifier: Modifier = Modifier, arrayLabels: List<String>) {
                     .weight(1f),
                 contentAlignment = Alignment.Center
             ) {
-                 Text(label, fontSize = 14.sp, color = Color.White, textAlign = TextAlign.Center)
+                 Text(label, fontSize = arrayLabelFontSize, color = Color.White, textAlign = TextAlign.Center)
             }
         }
 
@@ -267,7 +297,9 @@ fun ControlColumn(
     row2Labels: Pair<String, String>,
     row3AndLastLabels: List<String>,
     themeColor: Color,
-    columnIdentifier: String
+    columnIdentifier: String,
+    headerFontSize: TextUnit = 16.sp,
+    row2FontSize: TextUnit = 12.sp
 ) {
     Column(
         modifier = modifier
@@ -275,8 +307,8 @@ fun ControlColumn(
             .padding(horizontal = 2.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
-        HeaderCell(text = columnTitle, themeColor = themeColor)
-        TwoSplitCell(labels = row2Labels, themeColor = themeColor)
+        HeaderCell(text = columnTitle, themeColor = themeColor, fontSize = headerFontSize)
+        TwoSplitCell(labels = row2Labels, themeColor = themeColor, labelFontSize = row2FontSize)
         FourSplitCell(labels = row3AndLastLabels, themeColor = themeColor)
 
         // Rows 4-8: Five rows of four temporary buttons

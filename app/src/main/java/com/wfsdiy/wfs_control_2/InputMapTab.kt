@@ -154,10 +154,25 @@ fun InputMapTab(
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
     val screenWidthDp = configuration.screenWidthDp.dp
+    val screenHeightDp = configuration.screenHeightDp.dp
     val screenDensity = density.density
     
-    val baseMarkerRadius = (screenWidthDp.value / 40f).coerceIn(7.5f, 17.5f) // 7.5-17.5dp range (half size)
-    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(7.5f, 17.5f)
+    // Use physical screen size instead of density-independent pixels
+    val physicalWidthInches = screenWidthDp.value / 160f // Convert dp to inches (160 dp = 1 inch)
+    val physicalHeightInches = screenHeightDp.value / 160f
+    val diagonalInches = sqrt(physicalWidthInches * physicalWidthInches + physicalHeightInches * physicalHeightInches)
+    
+    // Consider devices with diagonal < 6 inches as phones (adjusted for modern phones)
+    val isPhone = diagonalInches < 6.0f
+    
+    val baseMarkerRadius = if (isPhone) {
+        // Small markers for phones
+        2.75f
+    } else {
+        // Good size markers for tablets
+        ((screenWidthDp.value / 50f) * 3f).coerceIn(24f, 52.5f)
+    }
+    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(0.5f, 17.5f)
     val markerRadius = responsiveMarkerRadius.dpToPx()
 
     val textPaint = remember {
@@ -182,7 +197,7 @@ fun InputMapTab(
         val pickupRadiusMultiplier = 1.25f
 
         // Update shared canvas dimensions and call onCanvasSizeChanged
-        LaunchedEffect(canvasWidth, canvasHeight) {
+        LaunchedEffect(canvasWidth, canvasHeight, markerRadius) {
             if (canvasWidth > 0f && canvasHeight > 0f) {
                 CanvasDimensions.updateDimensions(canvasWidth, canvasHeight)
                 CanvasDimensions.updateMarkerRadius(markerRadius)
@@ -534,7 +549,7 @@ fun InputMapTab(
                 }
                 
                 // Assuming drawMarker is defined elsewhere and handles its own textPaint settings for visibility/zoom
-                drawMarker(displayMarker, draggingMarkers.containsValue(marker.id), textPaint, false, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight)
+                drawMarker(displayMarker, draggingMarkers.containsValue(marker.id), textPaint, false, stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, !isPhone)
             }
         }
     }

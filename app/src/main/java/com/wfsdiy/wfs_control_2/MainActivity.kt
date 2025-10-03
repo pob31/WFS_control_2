@@ -30,6 +30,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.unit.TextUnit
 import androidx.core.content.ContextCompat
@@ -39,6 +40,7 @@ import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlin.math.min
 import kotlin.math.max
+import kotlin.math.sqrt
 import kotlinx.parcelize.Parcelize
 
 
@@ -199,6 +201,9 @@ class MainActivity : ComponentActivity() {
 
         WindowCompat.setDecorFitsSystemWindows(window, false)
         hideSystemUI()
+        
+        // Keep screen on to prevent it from turning off
+        window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
 
         // Handle notification intent
         handleNotificationIntent(intent)
@@ -268,9 +273,23 @@ fun WFSControlApp() {
     val screenHeightDp = configuration.screenHeightDp.dp
     val screenDensity = density.density
     
+    // Use physical screen size instead of density-independent pixels
+    val physicalWidthInches = screenWidthDp.value / 160f // Convert dp to inches (160 dp = 1 inch)
+    val physicalHeightInches = screenHeightDp.value / 160f
+    val diagonalInches = sqrt(physicalWidthInches * physicalWidthInches + physicalHeightInches * physicalHeightInches)
+    
+    // Consider devices with diagonal < 6 inches as phones (adjusted for modern phones)
+    val isPhone = diagonalInches < 6.0f
+    
     // Calculate responsive marker radius based on screen size and density
-    val baseMarkerRadius = (screenWidthDp.value / 40f).coerceIn(7.5f, 17.5f) // 7.5-17.5dp range (half size)
-    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(7.5f, 17.5f)
+    val baseMarkerRadius = if (isPhone) {
+        // Small markers for phones
+        2.75f
+    } else {
+        // Good size markers for tablets
+        ((screenWidthDp.value / 50f) * 3f).coerceIn(24f, 52.5f)
+    }
+    val responsiveMarkerRadius = (baseMarkerRadius * screenDensity).coerceIn(0.5f, 17.5f)
     val markerRadiusPx = responsiveMarkerRadius.dpToPx()
     var numberOfInputs by rememberSaveable { mutableStateOf(MAX_INPUTS) }
     var secondaryTouchMode by rememberSaveable { mutableStateOf(SecondaryTouchMode.ATTENUATION_DELAY) }
@@ -293,6 +312,13 @@ fun WFSControlApp() {
                 )
             }
         )
+    }
+    
+    // Update marker radius when screen size changes
+    LaunchedEffect(markerRadiusPx) {
+        markers = markers.map { marker ->
+            marker.copy(radius = markerRadiusPx)
+        }
     }
     var initialInputLayoutDone by remember { mutableStateOf(false) }
 
@@ -333,6 +359,14 @@ fun WFSControlApp() {
             }
         )
     }
+    
+    // Update cluster marker radius when screen size changes
+    LaunchedEffect(markerRadiusPx) {
+        clusterMarkers = clusterMarkers.map { marker ->
+            marker.copy(radius = markerRadiusPx)
+        }
+    }
+    
     var clusterNormalizedHeights by rememberSaveable { mutableStateOf(List(10) { 0.2f }) }
     var initialClusterLayoutDone by remember { mutableStateOf(false) }
 
@@ -340,9 +374,15 @@ fun WFSControlApp() {
     val tabs = listOf("Input Map", "Lock Input Markers", "View Input Markers", "Input Parameters", "Cluster Map", "Cluster Height", "Array Adjust", "Settings")
 
     val dynamicTabFontSize: TextUnit = remember(screenWidthDp) {
-        val baseSize = screenWidthDp.value / 35f
-        val fontSize = max(10f, min(20f, baseSize))
+        val baseSize = screenWidthDp.value / 66f  // Changed from /60f to /66f for 10% smaller
+        val fontSize = max(4.2f, min(20f, baseSize))  // Keep 4.2f minimum
         fontSize.sp
+    }
+    
+    val dynamicTabRowHeight: Dp = remember(screenWidthDp) {
+        val baseHeight = screenWidthDp.value / 20f  // Changed from /15f to /20f for smaller phones
+        val height = max(32f, min(56f, baseHeight))  // Changed minimum from 40f to 32f
+        height.dp
     }
 
     var currentCanvasPixelWidth by remember { mutableStateOf(0f) }
@@ -552,7 +592,7 @@ fun WFSControlApp() {
         Column(modifier = Modifier.fillMaxSize()) {
             TabRow(
                 selectedTabIndex = selectedTab,
-                modifier = Modifier.height(56.dp),
+                modifier = Modifier.height(dynamicTabRowHeight),
                 containerColor = Color.DarkGray // Set a base color for the TabRow if needed, otherwise it might be transparent or themed
             ) {
                 tabs.forEachIndexed { index, title ->
@@ -671,6 +711,12 @@ fun WFSControlApp() {
                 6 -> ArrayAdjustTab()
             7 -> SettingsTab(
                 onResetToDefaults = resetToDefaults,
+                onShutdownApp = {
+                    // Stop OSC service
+                    oscService?.stopSelf()
+                    // Finish the activity to close the app
+                    (context as? android.app.Activity)?.finish()
+                },
                 onNetworkParametersChanged = {
                     // Update service network parameters when settings change
                     oscService?.updateNetworkParameters()

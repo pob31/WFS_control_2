@@ -223,7 +223,7 @@ fun NetworkTab(
             },
             modifier = Modifier.fillMaxWidth(0.8f)
         ) {
-            Text("Apply")
+            Text("Apply Network Settings")
         }
     }
 }

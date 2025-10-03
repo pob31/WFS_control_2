@@ -107,7 +107,8 @@ fun <T> DrawScope.drawMarker(
     currentStageOriginX: Float,
     currentStageOriginY: Float,
     canvasPixelW: Float,
-    canvasPixelH: Float
+    canvasPixelH: Float,
+    isTablet: Boolean = false
 ) where T : Any {
     val id: Int
     val position: Offset
@@ -155,7 +156,8 @@ fun <T> DrawScope.drawMarker(
     drawCircle(color = Color.Black, radius = innerRadius, center = position)
 
     val referenceDimension = min(size.width, size.height)
-    val dynamicBaseTextSizePx = referenceDimension / (if (isClusterMarker) 45f else 52.5f)
+    val baseTextSize = referenceDimension / (if (isClusterMarker) 40f else 45f) // Larger text (was 45f/52.5f)
+    val dynamicBaseTextSizePx = if (isTablet) baseTextSize * 0.9f else baseTextSize // 10% smaller on tablets
 
     textPaint.color = labelColor
     val idText = id.toString()
