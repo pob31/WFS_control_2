@@ -629,7 +629,7 @@ private fun RenderDirectivitySection(
     }
     
     Column {
-        Text("Rotation: ${String.format("%.0f", rotationValue)}°", fontSize = 12.sp, color = Color.White)
+        Text("Rotation", fontSize = 12.sp, color = Color.White)
         AngleDial(
             value = rotationValue,
             onValueChange = { newValue ->

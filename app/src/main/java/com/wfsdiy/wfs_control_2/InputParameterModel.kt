@@ -940,10 +940,68 @@ object InputParameterDefinitions {
      * Reverse formula to convert actual value to normalized (0-1)
      */
     fun reverseFormula(definition: InputParameterDefinition, actualValue: Float): Float {
-        // For simplicity, we use linear inverse
-        // A more sophisticated implementation would reverse each formula
-        val normalized = (actualValue - definition.minValue) / (definition.maxValue - definition.minValue)
-        return normalized.coerceIn(0f, 1f)
+        val y = actualValue.coerceIn(definition.minValue, definition.maxValue)
+        
+        return when {
+            definition.formula == null -> {
+                // Linear mapping reverse
+                (y - definition.minValue) / (definition.maxValue - definition.minValue)
+            }
+            else -> {
+                try {
+                    when (definition.formula) {
+                        "20*log10(pow(10,-92./20.)+((1-pow(10,-92./20.))*pow(x,2)))" -> {
+                            // Reverse: x = sqrt((10^(y/20) - 10^(-92/20)) / (1 - 10^(-92/20)))
+                            val minDb = -92f
+                            val base = 10f.pow(minDb / 20f)
+                            val numerator = 10f.pow(y / 20f) - base
+                            val denominator = 1f - base
+                            kotlin.math.sqrt(numerator / denominator).coerceIn(0f, 1f)
+                        }
+                        "20*log10(pow(10,-24./20.)+((1-pow(10,-24./20.))*pow(x,2)))" -> {
+                            val minDb = -24f
+                            val base = 10f.pow(minDb / 20f)
+                            val numerator = 10f.pow(y / 20f) - base
+                            val denominator = 1f - base
+                            kotlin.math.sqrt(numerator / denominator).coerceIn(0f, 1f)
+                        }
+                        "20*log10(pow(10,-48./20.)+((1-pow(10,-48./20.))*pow(x,2)))" -> {
+                            val minDb = -48f
+                            val base = 10f.pow(minDb / 20f)
+                            val numerator = 10f.pow(y / 20f) - base
+                            val denominator = 1f - base
+                            kotlin.math.sqrt(numerator / denominator).coerceIn(0f, 1f)
+                        }
+                        "20*log10(pow(10,-60./20.)+((1-pow(10,-60./20.))*pow(x,2)))" -> {
+                            val minDb = -60f
+                            val base = 10f.pow(minDb / 20f)
+                            val numerator = 10f.pow(y / 20f) - base
+                            val denominator = 1f - base
+                            kotlin.math.sqrt(numerator / denominator).coerceIn(0f, 1f)
+                        }
+                        "(x*200.0)-100.0" -> (y + 100f) / 200f
+                        "(x*358)+2" -> (y - 2f) / 358f
+                        "(x*360)-180" -> (y + 180f) / 360f
+                        "(x*180)-90" -> (y + 90f) / 180f
+                        "x*50.0" -> y / 50f
+                        "x*19.99+0.01" -> (y - 0.01f) / 19.99f
+                        "x*100" -> y / 100f
+                        "(x*6.0)-0.6" -> (y + 0.6f) / 6f
+                        "pow(10.0,(x*2.0)-1.0)" -> (log10(y) + 1f) / 2f
+                        "(x*9.0)+1" -> (y - 1f) / 9f
+                        "20*pow(10,4*x)" -> log10(y / 20f) / 4f
+                        "(x*0.8)+0.1" -> (y - 0.1f) / 0.8f
+                        "10*pow(x,2)" -> kotlin.math.sqrt(y / 10f)
+                        "pow(10.0,sqrt(x)*4.0-2.0)" -> ((log10(y) + 2f) / 4f).pow(2)
+                        "x*360" -> y / 360f
+                        "pow(10.0,(x*4.0)-2.0)" -> (log10(y) + 2f) / 4f
+                        else -> (y - definition.minValue) / (definition.maxValue - definition.minValue)
+                    }
+                } catch (e: Exception) {
+                    (y - definition.minValue) / (definition.maxValue - definition.minValue)
+                }
+            }
+        }.coerceIn(0f, 1f)
     }
 }
 
