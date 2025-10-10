@@ -663,7 +663,11 @@ fun WFSControlApp() {
                     viewModel?.syncMarkers(updatedMarkers)
                 }
                 )
-                3 -> InputParametersTab()
+                3 -> {
+                    viewModel?.let { vm ->
+                        InputParametersTab(viewModel = vm)
+                    } ?: Text("Loading...", color = Color.White)
+                }
                 4 -> ClusterMapTab(
                     clusterMarkers = clusterMarkers,
                 onClusterMarkersChanged = { updatedClusterMarkers ->

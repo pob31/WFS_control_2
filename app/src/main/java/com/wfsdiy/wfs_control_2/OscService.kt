@@ -66,12 +66,22 @@ class OscService : Service() {
         val timestamp: Long = System.currentTimeMillis()
     )
     
+    data class OscInputParameterUpdate(
+        val oscPath: String,
+        val inputId: Int,
+        val intValue: Int? = null,
+        val floatValue: Float? = null,
+        val stringValue: String? = null,
+        val timestamp: Long = System.currentTimeMillis()
+    )
+    
     // Buffers for incoming OSC data
     private val markerUpdates = ConcurrentLinkedQueue<OscMarkerUpdate>()
     private val normalizedMarkerUpdates = ConcurrentLinkedQueue<OscNormalizedMarkerUpdate>()
     private val stageUpdates = ConcurrentLinkedQueue<OscStageUpdate>()
     private val inputsUpdates = ConcurrentLinkedQueue<OscInputsUpdate>()
     private val clusterZUpdates = ConcurrentLinkedQueue<OscClusterZUpdate>()
+    private val inputParameterUpdates = ConcurrentLinkedQueue<OscInputParameterUpdate>()
     
     // StateFlows for real-time data (when MainActivity is active)
     private val _markers = MutableStateFlow<List<Marker>>(emptyList())
@@ -103,6 +113,9 @@ class OscService : Service() {
     
     private val _numberOfInputs = MutableStateFlow(64)
     val numberOfInputs: StateFlow<Int> = _numberOfInputs.asStateFlow()
+    
+    private val _inputParametersState = MutableStateFlow(InputParametersState())
+    val inputParametersState: StateFlow<InputParametersState> = _inputParametersState.asStateFlow()
     
     // Store screen dimensions once at startup
     private var screenWidth: Float = 0f
@@ -196,6 +209,18 @@ class OscService : Service() {
                             updatedHeights[index] = newNormalizedZ.coerceIn(0f, 1f)
                             _clusterNormalizedHeights.value = updatedHeights
                         }
+                    },
+                    onInputParameterIntReceived = { oscPath, inputId, value ->
+                        inputParameterUpdates.offer(OscInputParameterUpdate(oscPath, inputId, intValue = value))
+                        updateInputParameterFromOsc(oscPath, inputId, intValue = value)
+                    },
+                    onInputParameterFloatReceived = { oscPath, inputId, value ->
+                        inputParameterUpdates.offer(OscInputParameterUpdate(oscPath, inputId, floatValue = value))
+                        updateInputParameterFromOsc(oscPath, inputId, floatValue = value)
+                    },
+                    onInputParameterStringReceived = { oscPath, inputId, value ->
+                        inputParameterUpdates.offer(OscInputParameterUpdate(oscPath, inputId, stringValue = value))
+                        updateInputParameterFromOsc(oscPath, inputId, stringValue = value)
                     }
                 )
             } catch (e: Exception) {
@@ -216,6 +241,75 @@ class OscService : Service() {
         serviceScope.launch {
             sendOscClusterZ(this@OscService, clusterId, normalizedZ)
         }
+    }
+    
+    fun sendInputParameterInt(oscPath: String, inputId: Int, value: Int) {
+        serviceScope.launch {
+            sendOscInputParameterInt(this@OscService, oscPath, inputId, value)
+        }
+    }
+    
+    fun sendInputParameterFloat(oscPath: String, inputId: Int, value: Float) {
+        serviceScope.launch {
+            sendOscInputParameterFloat(this@OscService, oscPath, inputId, value)
+        }
+    }
+    
+    fun sendInputParameterString(oscPath: String, inputId: Int, value: String) {
+        serviceScope.launch {
+            sendOscInputParameterString(this@OscService, oscPath, inputId, value)
+        }
+    }
+    
+    fun requestInputParameters(inputId: Int) {
+        serviceScope.launch {
+            sendOscRequestInputParameters(this@OscService, inputId)
+        }
+    }
+    
+    private fun updateInputParameterFromOsc(oscPath: String, inputId: Int, intValue: Int? = null, floatValue: Float? = null, stringValue: String? = null) {
+        val currentState = _inputParametersState.value
+        val channel = currentState.getChannel(inputId)
+        
+        // Find parameter definition by OSC path
+        val definition = InputParameterDefinitions.allParameters.find { it.oscPath == oscPath } ?: return
+        
+        val paramValue = when {
+            stringValue != null -> {
+                InputParameterValue(
+                    normalizedValue = 0f,
+                    stringValue = stringValue,
+                    displayValue = stringValue
+                )
+            }
+            intValue != null -> {
+                val normalized = InputParameterDefinitions.reverseFormula(definition, intValue.toFloat())
+                val actualValue = InputParameterDefinitions.applyFormula(definition, normalized)
+                val displayText = if (definition.enumValues != null && intValue >= 0 && intValue < definition.enumValues.size) {
+                    definition.enumValues[intValue]
+                } else {
+                    "${actualValue.toInt()}${definition.unit ?: ""}"
+                }
+                InputParameterValue(
+                    normalizedValue = normalized,
+                    stringValue = "",
+                    displayValue = displayText
+                )
+            }
+            floatValue != null -> {
+                val normalized = InputParameterDefinitions.reverseFormula(definition, floatValue)
+                val actualValue = InputParameterDefinitions.applyFormula(definition, normalized)
+                InputParameterValue(
+                    normalizedValue = normalized,
+                    stringValue = "",
+                    displayValue = "${String.format("%.2f", actualValue)}${definition.unit ?: ""}"
+                )
+            }
+            else -> return
+        }
+        
+        channel.setParameter(definition.variableName, paramValue)
+        _inputParametersState.value = currentState.copy()
     }
     
     fun startOscServerWithCanvasDimensions(canvasWidth: Float, canvasHeight: Float) {
@@ -281,6 +375,14 @@ class OscService : Service() {
         return updates
     }
     
+    fun getBufferedInputParameterUpdates(): List<OscInputParameterUpdate> {
+        val updates = mutableListOf<OscInputParameterUpdate>()
+        while (inputParameterUpdates.isNotEmpty()) {
+            inputParameterUpdates.poll()?.let { updates.add(it) }
+        }
+        return updates
+    }
+    
     // Methods for MainActivity to sync current state
     fun syncMarkers(markers: List<Marker>) {
         _markers.value = markers
@@ -305,6 +407,15 @@ class OscService : Service() {
     
     fun syncNumberOfInputs(count: Int) {
         _numberOfInputs.value = count
+    }
+    
+    fun syncInputParametersState(state: InputParametersState) {
+        _inputParametersState.value = state
+    }
+    
+    fun setSelectedInput(inputId: Int) {
+        val currentState = _inputParametersState.value
+        _inputParametersState.value = currentState.copy(selectedInputId = inputId)
     }
 
     override fun onDestroy() {

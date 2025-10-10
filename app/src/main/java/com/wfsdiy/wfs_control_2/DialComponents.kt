@@ -29,6 +29,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
@@ -116,6 +117,7 @@ fun BasicDial(
     valueUnit: String = "%",
     isValueEditable: Boolean = false,
     onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
     enabled: Boolean = true
 ) {
@@ -188,14 +190,26 @@ fun BasicDial(
             // In Compose: 0° is 3 o'clock, 90° is 6 o'clock (bottom), 180° is 9 o'clock, 270° is 12 o'clock (top)
             // We want dead zone at bottom: 60° to 120° (centered at 90°)
             
-            // Draw the active track arc (skipping the dead zone at bottom)
+            // Draw the full inactive track arc (dimmer)
             drawArc(
-                color = trackColor,
+                color = trackColor.copy(alpha = 0.3f),
                 startAngle = 120f, // Start after dead zone (bottom-right)
                 sweepAngle = 300f,  // 300° active range (360° - 60° dead zone)
                 useCenter = false,
-                style = Stroke(width = strokeWidth.value * 2f, cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
             )
+            
+            // Draw the active track arc (from start to current position)
+            val activeArcSweep = (value * 300f).coerceIn(0f, 300f) // value is 0-1
+            if (activeArcSweep > 0f) {
+                drawArc(
+                    color = trackColor.copy(alpha = 0.75f),
+                    startAngle = 120f,
+                    sweepAngle = activeArcSweep,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
+                )
+            }
             
             // Draw value indicator line
             val indicatorEndX = center.x + cos(currentAngle.toRadians()) * radius
@@ -225,6 +239,13 @@ fun BasicDial(
             if (isValueEditable) {
                 var textFieldValue by remember { mutableStateOf(TextFieldValue(displayedValue)) }
                 
+                // Update text field when displayedValue changes (from dial rotation)
+                LaunchedEffect(displayedValue) {
+                    textFieldValue = TextFieldValue(displayedValue, selection = TextRange(displayedValue.length))
+                }
+                
+                val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+                
                 BasicTextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
@@ -238,7 +259,14 @@ fun BasicDial(
                     ),
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Number
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            onValueCommit(textFieldValue.text)
+                            focusManager.clearFocus()
+                        }
                     ),
                     modifier = Modifier.size(width = dialSize * 0.6f, height = dialSize * 0.15f)
                 )
@@ -367,14 +395,26 @@ fun RotaryKnob(
             // In Compose: 0° is 3 o'clock, 90° is 6 o'clock (bottom), 180° is 9 o'clock, 270° is 12 o'clock (top)
             // We want dead zone at bottom: 60° to 120° (centered at 90°)
             
-            // Draw the active track arc (skipping the dead zone at bottom)
+            // Draw the full inactive track arc (dimmer)
             drawArc(
-                color = trackColor,
+                color = trackColor.copy(alpha = 0.3f),
                 startAngle = 120f, // Start after dead zone (bottom-right)
                 sweepAngle = 300f,  // 300° active range (360° - 60° dead zone)
                 useCenter = false,
-                style = Stroke(width = strokeWidth.value * 2f, cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
             )
+            
+            // Draw the active track arc (from start to current position)
+            val activeArcSweep = (normalizedValue * 300f).coerceIn(0f, 300f)
+            if (activeArcSweep > 0f) {
+                drawArc(
+                    color = trackColor.copy(alpha = 0.75f),
+                    startAngle = 120f,
+                    sweepAngle = activeArcSweep,
+                    useCenter = false,
+                    style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
+                )
+            }
             
             // Draw value indicator line
             val indicatorEndX = center.x + cos(currentAngle.toRadians()) * radius
@@ -530,13 +570,13 @@ fun AngleDial(
                 style = Stroke(width = strokeWidth.value)
             )
             
-            // Draw full 360° track
+            // Draw full 360° track (single color, no active/inactive)
             drawArc(
                 color = trackColor,
                 startAngle = 0f,
                 sweepAngle = 360f,
                 useCenter = false,
-                style = Stroke(width = strokeWidth.value * 2f, cap = StrokeCap.Round)
+                style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
             )
             
             // Draw value indicator as a large dot on the track

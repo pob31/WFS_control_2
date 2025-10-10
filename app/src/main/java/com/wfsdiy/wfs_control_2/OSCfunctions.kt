@@ -343,6 +343,142 @@ fun sendOscMarkerRadialChange(context: Context, markerId: Int, modeNumber: Int, 
     }
 }
 
+/**
+ * Send input parameter value via OSC
+ * All parameters send inputId first, then the value
+ */
+fun sendOscInputParameterInt(context: Context, oscPath: String, inputId: Int, value: Int) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
+            val outgoingPort = outgoingPortStr.toIntOrNull()
+
+            if (outgoingPort == null || !isValidPort(outgoingPortStr)) {
+                return@launch
+            }
+            if (ipAddressStr.isBlank() || !isValidIpAddress(ipAddressStr)) {
+                return@launch
+            }
+
+            val addressPatternBytes = getPaddedBytes(oscPath)
+            // Type tag for two integers (inputId, value)
+            val typeTagBytes = getPaddedBytes(",ii")
+            val inputIdBytes = inputId.toBytesBigEndian()
+            val valueBytes = value.toBytesBigEndian()
+
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + inputIdBytes + valueBytes
+
+            DatagramSocket().use { socket ->
+                val inetAddress = InetAddress.getByName(ipAddressStr)
+                val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
+                socket.send(packet)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
+
+fun sendOscInputParameterFloat(context: Context, oscPath: String, inputId: Int, value: Float) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
+            val outgoingPort = outgoingPortStr.toIntOrNull()
+
+            if (outgoingPort == null || !isValidPort(outgoingPortStr)) {
+                return@launch
+            }
+            if (ipAddressStr.isBlank() || !isValidIpAddress(ipAddressStr)) {
+                return@launch
+            }
+
+            val addressPatternBytes = getPaddedBytes(oscPath)
+            // Type tag for integer (inputId) and float (value)
+            val typeTagBytes = getPaddedBytes(",if")
+            val inputIdBytes = inputId.toBytesBigEndian()
+            val valueBytes = value.toBytesBigEndian()
+
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + inputIdBytes + valueBytes
+
+            DatagramSocket().use { socket ->
+                val inetAddress = InetAddress.getByName(ipAddressStr)
+                val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
+                socket.send(packet)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
+
+fun sendOscInputParameterString(context: Context, oscPath: String, inputId: Int, value: String) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
+            val outgoingPort = outgoingPortStr.toIntOrNull()
+
+            if (outgoingPort == null || !isValidPort(outgoingPortStr)) {
+                return@launch
+            }
+            if (ipAddressStr.isBlank() || !isValidIpAddress(ipAddressStr)) {
+                return@launch
+            }
+
+            val addressPatternBytes = getPaddedBytes(oscPath)
+            // Type tag for integer (inputId) and string (value)
+            val typeTagBytes = getPaddedBytes(",is")
+            val inputIdBytes = inputId.toBytesBigEndian()
+            val valueBytes = getPaddedBytes(value)
+
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + inputIdBytes + valueBytes
+
+            DatagramSocket().use { socket ->
+                val inetAddress = InetAddress.getByName(ipAddressStr)
+                val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
+                socket.send(packet)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
+
+/**
+ * Request input parameter updates from the server
+ * Sends only the inputId (outgoing only)
+ */
+fun sendOscRequestInputParameters(context: Context, inputId: Int) {
+    CoroutineScope(Dispatchers.IO).launch {
+        try {
+            val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
+            val outgoingPort = outgoingPortStr.toIntOrNull()
+
+            if (outgoingPort == null || !isValidPort(outgoingPortStr)) {
+                return@launch
+            }
+            if (ipAddressStr.isBlank() || !isValidIpAddress(ipAddressStr)) {
+                return@launch
+            }
+
+            val addressPattern = "/remoteInput/inputNumber"
+            val addressPatternBytes = getPaddedBytes(addressPattern)
+            // Type tag for single integer (inputId)
+            val typeTagBytes = getPaddedBytes(",i")
+            val inputIdBytes = inputId.toBytesBigEndian()
+
+            val oscPacketBytes = addressPatternBytes + typeTagBytes + inputIdBytes
+
+            DatagramSocket().use { socket ->
+                val inetAddress = InetAddress.getByName(ipAddressStr)
+                val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
+                socket.send(packet)
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+}
+
 
 fun parseOscString(buffer: ByteBuffer): String {
     val bytes = mutableListOf<Byte>()
@@ -369,6 +505,9 @@ typealias OscDataCallback = (id: Int, name: String?, position: Offset?, isCluste
 typealias OscStageDimensionCallback = (value: Float) -> Unit
 typealias OscNumberOfInputsCallback = (count: Int) -> Unit
 typealias OscClusterZCallback = (ClusterId: Int, normalizedZ: Float) -> Unit
+typealias OscInputParameterIntCallback = (oscPath: String, inputId: Int, value: Int) -> Unit
+typealias OscInputParameterFloatCallback = (oscPath: String, inputId: Int, value: Float) -> Unit
+typealias OscInputParameterStringCallback = (oscPath: String, inputId: Int, value: String) -> Unit
 
 fun parseAndProcessOscPacket(
     data: ByteArray,
@@ -382,7 +521,10 @@ fun parseAndProcessOscPacket(
     onStageOriginYChanged: OscStageDimensionCallback? = null,
     onStageOriginZChanged: OscStageDimensionCallback? = null,
     onNumberOfInputsChanged: OscNumberOfInputsCallback? = null,
-    onClusterZChanged: OscClusterZCallback? = null
+    onClusterZChanged: OscClusterZCallback? = null,
+    onInputParameterIntReceived: OscInputParameterIntCallback? = null,
+    onInputParameterFloatReceived: OscInputParameterFloatCallback? = null,
+    onInputParameterStringReceived: OscInputParameterStringCallback? = null
 ) {
     if (data.isEmpty()) {
         return
@@ -558,6 +700,43 @@ fun parseAndProcessOscPacket(
                     }
                 }
             }
+            address.startsWith("/remoteInput/") -> {
+                // Handle input parameter messages
+                val parameterName = address.removePrefix("/remoteInput/")
+                
+                if (!buffer.hasRemaining()) {
+                    return
+                }
+                
+                val typeTags = parseOscString(buffer)
+                
+                when {
+                    typeTags == ",ii" -> {
+                        // Integer parameter: inputId + int value
+                        if (buffer.remaining() < 8) return
+                        val inputId = parseOscInt(buffer)
+                        val value = parseOscInt(buffer)
+                        onInputParameterIntReceived?.invoke(address, inputId, value)
+                    }
+                    typeTags == ",if" -> {
+                        // Float parameter: inputId + float value
+                        if (buffer.remaining() < 8) return
+                        val inputId = parseOscInt(buffer)
+                        val value = parseOscFloat(buffer)
+                        onInputParameterFloatReceived?.invoke(address, inputId, value)
+                    }
+                    typeTags == ",is" -> {
+                        // String parameter: inputId + string value
+                        if (buffer.remaining() < 4) return
+                        val inputId = parseOscInt(buffer)
+                        val value = parseOscString(buffer)
+                        onInputParameterStringReceived?.invoke(address, inputId, value)
+                    }
+                    else -> {
+                        // Unknown type tag
+                    }
+                }
+            }
             else -> {
 
             }
@@ -578,7 +757,10 @@ fun startOscServer(
     onStageOriginYChanged: OscStageDimensionCallback? = null,
     onStageOriginZChanged: OscStageDimensionCallback? = null,
     onNumberOfInputsChanged: OscNumberOfInputsCallback? = null,
-    onClusterZChanged: OscClusterZCallback? = null
+    onClusterZChanged: OscClusterZCallback? = null,
+    onInputParameterIntReceived: OscInputParameterIntCallback? = null,
+    onInputParameterFloatReceived: OscInputParameterFloatCallback? = null,
+    onInputParameterStringReceived: OscInputParameterStringCallback? = null
 ) {
     CoroutineScope(Dispatchers.IO).launch {
         var serverSocket: DatagramSocket? = null
@@ -616,7 +798,10 @@ fun startOscServer(
                         onStageOriginYChanged,
                         onStageOriginZChanged,
                         onNumberOfInputsChanged,
-                        onClusterZChanged
+                        onClusterZChanged,
+                        onInputParameterIntReceived,
+                        onInputParameterFloatReceived,
+                        onInputParameterStringReceived
                     )
                 } catch (e: java.net.SocketTimeoutException) {
 

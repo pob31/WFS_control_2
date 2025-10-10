@@ -39,6 +39,9 @@ class MainActivityViewModel(private val oscService: OscService) : ViewModel() {
     
     val numberOfInputs: StateFlow<Int> = oscService.numberOfInputs
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 64)
+    
+    val inputParametersState: StateFlow<InputParametersState> = oscService.inputParametersState
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InputParametersState())
 
     fun sendMarkerPosition(markerId: Int, x: Float, y: Float, isCluster: Boolean) {
         oscService.sendMarkerPosition(markerId, x, y, isCluster)
@@ -106,6 +109,35 @@ class MainActivityViewModel(private val oscService: OscService) : ViewModel() {
     
     fun syncNumberOfInputs(count: Int) {
         oscService.syncNumberOfInputs(count)
+    }
+    
+    // Input parameter methods
+    fun sendInputParameterInt(oscPath: String, inputId: Int, value: Int) {
+        oscService.sendInputParameterInt(oscPath, inputId, value)
+    }
+    
+    fun sendInputParameterFloat(oscPath: String, inputId: Int, value: Float) {
+        oscService.sendInputParameterFloat(oscPath, inputId, value)
+    }
+    
+    fun sendInputParameterString(oscPath: String, inputId: Int, value: String) {
+        oscService.sendInputParameterString(oscPath, inputId, value)
+    }
+    
+    fun requestInputParameters(inputId: Int) {
+        oscService.requestInputParameters(inputId)
+    }
+    
+    fun setSelectedInput(inputId: Int) {
+        oscService.setSelectedInput(inputId)
+    }
+    
+    fun getBufferedInputParameterUpdates(): List<OscService.OscInputParameterUpdate> {
+        return oscService.getBufferedInputParameterUpdates()
+    }
+    
+    fun syncInputParametersState(state: InputParametersState) {
+        oscService.syncInputParametersState(state)
     }
 
     // Factory for creating the ViewModel with the OscService dependency

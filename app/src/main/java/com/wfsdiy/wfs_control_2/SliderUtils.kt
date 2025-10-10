@@ -1,21 +1,19 @@
 package com.wfsdiy.wfs_control_2
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.foundation.layout.fillMaxHeight
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -23,12 +21,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.TextFieldValue
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.unit.sp
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.roundToInt
@@ -81,11 +87,125 @@ fun BidirectionalSlider(
     trackThickness: Dp? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onValueChangeFinished: (() -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    displayedValue: String = "",
+    isValueEditable: Boolean = false,
+    onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
+    valueUnit: String = "",
+    valueTextColor: Color = Color.White
 ) {
     val responsiveSizes = getResponsiveSliderSizes()
     val finalThumbSize = thumbSize ?: responsiveSizes.thumbSize
     val finalTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
+    if (isValueEditable && displayedValue.isNotEmpty()) {
+        // Slider with editable number box
+        if (orientation == SliderOrientation.HORIZONTAL) {
+            Row(
+                modifier = modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                BidirectionalSliderCore(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    orientation = orientation,
+                    sliderColor = sliderColor,
+                    trackBackgroundColor = trackBackgroundColor,
+                    valueRange = valueRange,
+                    thumbSize = finalThumbSize,
+                    trackThickness = finalTrackThickness,
+                    interactionSource = interactionSource,
+                    onValueChangeFinished = onValueChangeFinished,
+                    enabled = true // Always enabled for interaction, greying is visual only
+                )
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(100.dp)
+                )
+            }
+        } else {
+            Column(
+                modifier = modifier.wrapContentWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(90.dp) // Compact number box for vertical sliders
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    BidirectionalSliderCore(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.fillMaxHeight().width(40.dp), // Constrain track width
+                        orientation = orientation,
+                        sliderColor = sliderColor,
+                        trackBackgroundColor = trackBackgroundColor,
+                        valueRange = valueRange,
+                        thumbSize = finalThumbSize,
+                        trackThickness = finalTrackThickness,
+                        interactionSource = interactionSource,
+                        onValueChangeFinished = onValueChangeFinished,
+                        enabled = true // Always enabled for interaction, greying is visual only
+                    )
+                }
+            }
+        }
+    } else {
+        // Slider without editable box (backward compatibility)
+        BidirectionalSliderCore(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier,
+            orientation = orientation,
+            sliderColor = sliderColor,
+            trackBackgroundColor = trackBackgroundColor,
+            valueRange = valueRange,
+            thumbSize = finalThumbSize,
+            trackThickness = finalTrackThickness,
+            interactionSource = interactionSource,
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = true // Always enabled
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun BidirectionalSliderCore(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier,
+    orientation: SliderOrientation,
+    sliderColor: Color,
+    trackBackgroundColor: Color,
+    valueRange: ClosedFloatingPointRange<Float>,
+    thumbSize: DpSize?,
+    trackThickness: Dp?,
+    interactionSource: MutableInteractionSource,
+    onValueChangeFinished: (() -> Unit)?,
+    enabled: Boolean
+) {
+    val responsiveSizes = getResponsiveSliderSizes()
+    val actualThumbSize = thumbSize ?: responsiveSizes.thumbSize
+    val actualTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
     val baseModifier = if (orientation == SliderOrientation.VERTICAL) {
         modifier
             .graphicsLayer { rotationZ = -90f }
@@ -115,10 +235,10 @@ fun BidirectionalSlider(
         onValueChangeFinished = onValueChangeFinished,
         enabled = enabled,
         colors = SliderDefaults.colors(
-            thumbColor = sliderColor,
+            thumbColor = Color.White,
             activeTrackColor = Color.Transparent,
             inactiveTrackColor = Color.Transparent,
-            disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled),
+            disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled),
             disabledActiveTrackColor = Color.Transparent,
             disabledInactiveTrackColor = Color.Transparent
         ),
@@ -126,18 +246,16 @@ fun BidirectionalSlider(
             SliderDefaults.Thumb(
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(
-                    thumbColor = sliderColor,
-                    disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled)
-                ),
-                thumbSize = finalThumbSize,
-                enabled = enabled
+                    thumbColor = Color.White,
+                    disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled)
+                )
             )
         },
         track = { sliderState ->
             BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxSize() // Fill the space Slider provides for the track
-                    .height(4.dp) // Track is always drawn as a horizontal strip
+                    .fillMaxSize()
+                    .height(actualTrackThickness)
             ) {
                 val valueRangeStart = sliderState.valueRange.start
                 val valueRangeEnd = sliderState.valueRange.endInclusive
@@ -149,17 +267,19 @@ fun BidirectionalSlider(
                 val activeTrackStartFraction = min(normalizedCurrentValue, normalizedZeroPoint)
                 val activeTrackWidthFraction = abs(normalizedCurrentValue - normalizedZeroPoint)
 
+                // Inactive track (dimmer)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (enabled) trackBackgroundColor else trackBackgroundColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.3f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.3f))
                 )
+                // Active track (brighter)
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(maxWidth * activeTrackWidthFraction)
                         .offset(x = maxWidth * activeTrackStartFraction)
-                        .background(if (enabled) sliderColor else sliderColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.75f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.75f))
                 )
             }
         }
@@ -181,11 +301,17 @@ fun AutoCenterBidirectionalSlider(
     trackThickness: Dp? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onActualValueChangeFinished: (() -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    displayedValue: String = "",
+    isValueEditable: Boolean = false,
+    onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
+    valueUnit: String = "",
+    valueTextColor: Color = Color.White
 ) {
     val responsiveSizes = getResponsiveSliderSizes()
-    val finalThumbSize = thumbSize ?: responsiveSizes.thumbSize
-    val finalTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    val actualThumbSize = thumbSize ?: responsiveSizes.thumbSize
+    val actualTrackThickness = trackThickness ?: responsiveSizes.trackThickness
     val baseModifier = if (orientation == SliderOrientation.VERTICAL) {
         modifier
             .graphicsLayer { rotationZ = -90f }
@@ -218,10 +344,10 @@ fun AutoCenterBidirectionalSlider(
         },
         enabled = enabled,
         colors = SliderDefaults.colors(
-            thumbColor = sliderColor,
+            thumbColor = Color.White,
             activeTrackColor = Color.Transparent,
             inactiveTrackColor = Color.Transparent,
-            disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled),
+            disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled),
             disabledActiveTrackColor = Color.Transparent,
             disabledInactiveTrackColor = Color.Transparent
         ),
@@ -229,18 +355,16 @@ fun AutoCenterBidirectionalSlider(
             SliderDefaults.Thumb(
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(
-                    thumbColor = sliderColor,
-                    disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled)
-                ),
-                thumbSize = finalThumbSize,
-                enabled = enabled
+                    thumbColor = Color.White,
+                    disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled)
+                )
             )
         },
         track = { sliderState ->
             BoxWithConstraints(
                 modifier = Modifier
                     .fillMaxSize()
-                    .height(finalTrackThickness)
+                    .height(actualTrackThickness)
             ) {
                 val valueRangeStart = sliderState.valueRange.start
                 val valueRangeEnd = sliderState.valueRange.endInclusive
@@ -252,17 +376,19 @@ fun AutoCenterBidirectionalSlider(
                 val activeTrackStartFraction = min(normalizedCurrentValue, normalizedVisualCenter)
                 val activeTrackWidthFraction = abs(normalizedCurrentValue - normalizedVisualCenter)
 
+                // Inactive track (dimmer)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (enabled) trackBackgroundColor else trackBackgroundColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.3f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.3f))
                 )
+                // Active track (brighter)
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(maxWidth * activeTrackWidthFraction)
                         .offset(x = maxWidth * activeTrackStartFraction)
-                        .background(if (enabled) sliderColor else sliderColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.75f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.75f))
                 )
             }
         }
@@ -284,11 +410,129 @@ fun WidthExpansionSlider(
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onValueChangeFinished: (() -> Unit)? = null,
     enabled: Boolean = true,
-    hideThumbOnRelease: Boolean = false
+    hideThumbOnRelease: Boolean = false,
+    displayedValue: String = "",
+    isValueEditable: Boolean = false,
+    onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
+    valueUnit: String = "",
+    valueTextColor: Color = Color.White
 ) {
     val responsiveSizes = getResponsiveSliderSizes()
     val finalThumbSize = thumbSize ?: responsiveSizes.thumbSize
     val finalTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
+    if (isValueEditable && displayedValue.isNotEmpty()) {
+        // Slider with editable number box
+        if (orientation == SliderOrientation.HORIZONTAL) {
+            Row(
+                modifier = modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                WidthExpansionSliderCore(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    orientation = orientation,
+                    sliderColor = sliderColor,
+                    trackBackgroundColor = trackBackgroundColor,
+                    valueRange = valueRange,
+                    thumbSize = finalThumbSize,
+                    trackThickness = finalTrackThickness,
+                    interactionSource = interactionSource,
+                    onValueChangeFinished = onValueChangeFinished,
+                    enabled = true, // Always enabled for interaction, greying is visual only
+                    hideThumbOnRelease = hideThumbOnRelease
+                )
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(100.dp)
+                )
+            }
+        } else {
+            Column(
+                modifier = modifier.wrapContentWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(90.dp) // Compact number box for vertical sliders
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    WidthExpansionSliderCore(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.fillMaxHeight().width(40.dp), // Constrain track width
+                        orientation = orientation,
+                        sliderColor = sliderColor,
+                        trackBackgroundColor = trackBackgroundColor,
+                        valueRange = valueRange,
+                        thumbSize = finalThumbSize,
+                        trackThickness = finalTrackThickness,
+                        interactionSource = interactionSource,
+                        onValueChangeFinished = onValueChangeFinished,
+                        enabled = true, // Always enabled for interaction, greying is visual only
+                        hideThumbOnRelease = hideThumbOnRelease
+                    )
+                }
+            }
+        }
+    } else {
+        // Slider without editable box (backward compatibility)
+        WidthExpansionSliderCore(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier,
+            orientation = orientation,
+            sliderColor = sliderColor,
+            trackBackgroundColor = trackBackgroundColor,
+            valueRange = valueRange,
+            thumbSize = finalThumbSize,
+            trackThickness = finalTrackThickness,
+            interactionSource = interactionSource,
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = true, // Always enabled
+            hideThumbOnRelease = hideThumbOnRelease
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun WidthExpansionSliderCore(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier,
+    orientation: SliderOrientation,
+    sliderColor: Color,
+    trackBackgroundColor: Color,
+    valueRange: ClosedFloatingPointRange<Float>,
+    thumbSize: DpSize?,
+    trackThickness: Dp?,
+    interactionSource: MutableInteractionSource,
+    onValueChangeFinished: (() -> Unit)?,
+    enabled: Boolean,
+    hideThumbOnRelease: Boolean
+) {
+    val responsiveSizes = getResponsiveSliderSizes()
+    val actualThumbSize = thumbSize ?: responsiveSizes.thumbSize
+    val actualTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
     // Convert width expansion value (0-1) to raw slider position (0-1)
     // Inverse formula: if widthExpansion = 2 * abs(0.5 - raw), then raw = 0.5 ± (widthExpansion / 2)
     val rawSliderValue = if (value <= 0.5f) {
@@ -331,29 +575,22 @@ fun WidthExpansionSlider(
         onValueChangeFinished = onValueChangeFinished,
         enabled = enabled,
         colors = SliderDefaults.colors(
-            thumbColor = sliderColor,
+            thumbColor = Color.Transparent, // Invisible thumb
             activeTrackColor = Color.Transparent,
             inactiveTrackColor = Color.Transparent,
-            disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled),
+            disabledThumbColor = Color.Transparent,
             disabledActiveTrackColor = Color.Transparent,
             disabledInactiveTrackColor = Color.Transparent
         ),
         thumb = {
-            SliderDefaults.Thumb(
-                interactionSource = interactionSource,
-                colors = SliderDefaults.colors(
-                    thumbColor = sliderColor,
-                    disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled)
-                ),
-                thumbSize = finalThumbSize,
-                enabled = enabled
-            )
+            // Empty/invisible thumb
+            Box(modifier = Modifier.size(0.dp))
         },
         track = { sliderState ->
             BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxSize() // Fill the space Slider provides for the track
-                    .height(4.dp) // Track is always drawn as a horizontal strip
+                    .fillMaxSize()
+                    .height(actualTrackThickness)
             ) {
                 val valueRangeStart = sliderState.valueRange.start
                 val valueRangeEnd = sliderState.valueRange.endInclusive
@@ -366,17 +603,19 @@ fun WidthExpansionSlider(
                 val activeTrackWidthFraction = abs(normalizedCurrentValue - normalizedCenter) * 2f // *2 because we want full width at extremes
                 val activeTrackStartFraction = normalizedCenter - (activeTrackWidthFraction / 2f)
 
+                // Inactive track (dimmer)
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(if (enabled) trackBackgroundColor else trackBackgroundColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.3f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.3f))
                 )
+                // Active track (brighter)
                 Box(
                     modifier = Modifier
                         .fillMaxHeight()
                         .width(maxWidth * activeTrackWidthFraction)
                         .offset(x = maxWidth * activeTrackStartFraction)
-                        .background(if (enabled) sliderColor else sliderColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.75f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.75f))
                 )
             }
         }
@@ -397,11 +636,125 @@ fun StandardSlider(
     trackThickness: Dp? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     onValueChangeFinished: (() -> Unit)? = null,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    displayedValue: String = "",
+    isValueEditable: Boolean = false,
+    onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
+    valueUnit: String = "",
+    valueTextColor: Color = Color.White
 ) {
     val responsiveSizes = getResponsiveSliderSizes()
     val finalThumbSize = thumbSize ?: responsiveSizes.thumbSize
     val finalTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
+    if (isValueEditable && displayedValue.isNotEmpty()) {
+        // Slider with editable number box
+        if (orientation == SliderOrientation.HORIZONTAL) {
+            Row(
+                modifier = modifier,
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                StandardSliderCore(
+                    value = value,
+                    onValueChange = onValueChange,
+                    modifier = Modifier.weight(1f),
+                    orientation = orientation,
+                    sliderColor = sliderColor,
+                    trackBackgroundColor = trackBackgroundColor,
+                    valueRange = valueRange,
+                    thumbSize = finalThumbSize,
+                    trackThickness = finalTrackThickness,
+                    interactionSource = interactionSource,
+                    onValueChangeFinished = onValueChangeFinished,
+                    enabled = true // Always enabled for interaction, greying is visual only
+                )
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(100.dp)
+                )
+            }
+        } else {
+            Column(
+                modifier = modifier.wrapContentWidth(),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                EditableValueBox(
+                    displayedValue = displayedValue,
+                    valueUnit = valueUnit,
+                    valueTextColor = valueTextColor,
+                    onDisplayedValueChange = onDisplayedValueChange,
+                    onValueCommit = onValueCommit,
+                    enabled = enabled, // Visual greying only
+                    modifier = Modifier.width(90.dp) // Compact number box for vertical sliders
+                )
+                Box(
+                    modifier = Modifier.weight(1f),
+                    contentAlignment = Alignment.TopCenter
+                ) {
+                    StandardSliderCore(
+                        value = value,
+                        onValueChange = onValueChange,
+                        modifier = Modifier.fillMaxHeight().width(40.dp), // Constrain track width
+                        orientation = orientation,
+                        sliderColor = sliderColor,
+                        trackBackgroundColor = trackBackgroundColor,
+                        valueRange = valueRange,
+                        thumbSize = finalThumbSize,
+                        trackThickness = finalTrackThickness,
+                        interactionSource = interactionSource,
+                        onValueChangeFinished = onValueChangeFinished,
+                        enabled = true // Always enabled for interaction, greying is visual only
+                    )
+                }
+            }
+        }
+    } else {
+        // Slider without editable box (backward compatibility)
+        StandardSliderCore(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = modifier,
+            orientation = orientation,
+            sliderColor = sliderColor,
+            trackBackgroundColor = trackBackgroundColor,
+            valueRange = valueRange,
+            thumbSize = finalThumbSize,
+            trackThickness = finalTrackThickness,
+            interactionSource = interactionSource,
+            onValueChangeFinished = onValueChangeFinished,
+            enabled = true // Always enabled
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StandardSliderCore(
+    value: Float,
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier,
+    orientation: SliderOrientation,
+    sliderColor: Color,
+    trackBackgroundColor: Color,
+    valueRange: ClosedFloatingPointRange<Float>,
+    thumbSize: DpSize?,
+    trackThickness: Dp?,
+    interactionSource: MutableInteractionSource,
+    onValueChangeFinished: (() -> Unit)?,
+    enabled: Boolean
+) {
+    val responsiveSizes = getResponsiveSliderSizes()
+    val actualThumbSize = thumbSize ?: responsiveSizes.thumbSize
+    val actualTrackThickness = trackThickness ?: responsiveSizes.trackThickness
+    
     val baseModifier = if (orientation == SliderOrientation.VERTICAL) {
         modifier
             .graphicsLayer { rotationZ = -90f }
@@ -431,10 +784,10 @@ fun StandardSlider(
         onValueChangeFinished = onValueChangeFinished,
         enabled = enabled,
         colors = SliderDefaults.colors(
-            thumbColor = sliderColor,
+            thumbColor = Color.White,
             activeTrackColor = Color.Transparent,
             inactiveTrackColor = Color.Transparent,
-            disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled),
+            disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled),
             disabledActiveTrackColor = Color.Transparent,
             disabledInactiveTrackColor = Color.Transparent
         ),
@@ -442,18 +795,16 @@ fun StandardSlider(
             SliderDefaults.Thumb(
                 interactionSource = interactionSource,
                 colors = SliderDefaults.colors(
-                    thumbColor = sliderColor,
-                    disabledThumbColor = sliderColor.copy(alpha = ContentAlpha.disabled)
-                ),
-                thumbSize = finalThumbSize,
-                enabled = enabled
+                    thumbColor = Color.White,
+                    disabledThumbColor = Color.White.copy(alpha = ContentAlpha.disabled)
+                )
             )
         },
         track = { sliderState ->
     BoxWithConstraints(
                 modifier = Modifier
-                    .fillMaxSize() // Fill the space Slider provides for the track
-                    .height(4.dp) // Track is always drawn as a horizontal strip
+                    .fillMaxSize()
+                    .height(actualTrackThickness)
             ) {
                 val valueRangeStart = sliderState.valueRange.start
                 val valueRangeEnd = sliderState.valueRange.endInclusive
@@ -465,17 +816,19 @@ fun StandardSlider(
                 val activeTrackWidthFraction = normalizedCurrentValue
                 val activeTrackStartFraction = 0f
 
+                // Inactive track (dimmer)
         Box(
             modifier = Modifier
                         .fillMaxSize()
-                .background(if (enabled) trackBackgroundColor else trackBackgroundColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.3f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.3f))
         )
+                // Active track (brighter)
         Box(
             modifier = Modifier
                         .fillMaxHeight()
                         .width(maxWidth * activeTrackWidthFraction)
                         .offset(x = maxWidth * activeTrackStartFraction)
-                .background(if (enabled) sliderColor else sliderColor.copy(alpha = ContentAlpha.disabled))
+                        .background(if (enabled) sliderColor.copy(alpha = 0.75f) else sliderColor.copy(alpha = ContentAlpha.disabled * 0.75f))
                 )
             }
         }
@@ -484,4 +837,73 @@ fun StandardSlider(
 
 private object ContentAlpha {
     const val disabled: Float = 0.38f
+}
+
+/**
+ * Editable value box for sliders
+ */
+@Composable
+fun EditableValueBox(
+    displayedValue: String,
+    valueUnit: String,
+    valueTextColor: Color,
+    onDisplayedValueChange: (String) -> Unit,
+    onValueCommit: (String) -> Unit,
+    enabled: Boolean,
+    modifier: Modifier = Modifier
+) {
+    var textFieldValue by remember { mutableStateOf(TextFieldValue(displayedValue)) }
+    val focusManager = LocalFocusManager.current
+    
+    // Update text field when displayedValue changes (from slider movement)
+    LaunchedEffect(displayedValue) {
+        textFieldValue = TextFieldValue(
+            displayedValue, 
+            selection = TextRange(displayedValue.length)
+        )
+    }
+    
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+            .height(48.dp)
+            .background(Color.DarkGray, shape = RoundedCornerShape(4.dp))
+            .border(1.dp, if (enabled) Color.White else Color.Gray, RoundedCornerShape(4.dp))
+            .padding(horizontal = 8.dp)
+    ) {
+        BasicTextField(
+            value = textFieldValue,
+            onValueChange = { newValue ->
+                textFieldValue = newValue
+                onDisplayedValueChange(newValue.text)
+            },
+            enabled = true, // Always enabled for editing, visual greying via color
+            textStyle = TextStyle(
+                color = if (enabled) valueTextColor else Color.Gray,
+                fontSize = 14.sp,
+                textAlign = TextAlign.End
+            ),
+            keyboardOptions = KeyboardOptions(
+                keyboardType = KeyboardType.Decimal,
+                imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    onValueCommit(textFieldValue.text)
+                    focusManager.clearFocus()
+                }
+            ),
+            singleLine = true,
+            modifier = Modifier.weight(1f)
+        )
+        
+        if (valueUnit.isNotEmpty()) {
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = valueUnit,
+                fontSize = 14.sp,
+                color = if (enabled) valueTextColor else Color.Gray
+            )
+        }
+    }
 }
