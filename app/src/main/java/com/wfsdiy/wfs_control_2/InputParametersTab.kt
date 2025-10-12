@@ -329,103 +329,190 @@ private fun RenderInputSection(
     
     Spacer(modifier = Modifier.height(spacing.smallSpacing))
     
-    // Position X, Y, Z
+    // Position X, Y, Z with Joystick and Slider controls
     val positionX = selectedChannel.getParameter("positionX")
     var positionXValue by remember { 
-        mutableStateOf(positionX.displayValue.replace("m", "").trim()) 
+        mutableStateOf(positionX.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
     }
-    
-    LaunchedEffect(inputId) {
-        positionXValue = selectedChannel.getParameter("positionX").displayValue.replace("m", "").trim()
-    }
-    
-    ParameterNumberBox(
-        label = "Position X",
-        value = positionXValue,
-        onValueChange = { newValue ->
-            positionXValue = newValue
-        },
-        onValueCommit = { committedValue ->
-            committedValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(-50f, 50f)
-                positionXValue = String.format("%.2f", coerced)
-                selectedChannel.setParameter("positionX", InputParameterValue(
-                    normalizedValue = (coerced + 50f) / 100f,
-                    stringValue = "",
-                    displayValue = "${String.format("%.2f", coerced)}m"
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/positionX", inputId, coerced)
-            }
-        },
-        unit = "m",
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
     
     val positionY = selectedChannel.getParameter("positionY")
     var positionYValue by remember { 
-        mutableStateOf(positionY.displayValue.replace("m", "").trim()) 
+        mutableStateOf(positionY.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
     }
-    
-    LaunchedEffect(inputId) {
-        positionYValue = selectedChannel.getParameter("positionY").displayValue.replace("m", "").trim()
-    }
-    
-    ParameterNumberBox(
-        label = "Position Y",
-        value = positionYValue,
-        onValueChange = { newValue ->
-            positionYValue = newValue
-        },
-        onValueCommit = { committedValue ->
-            committedValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(-50f, 50f)
-                positionYValue = String.format("%.2f", coerced)
-                selectedChannel.setParameter("positionY", InputParameterValue(
-                    normalizedValue = (coerced + 50f) / 100f,
-                    stringValue = "",
-                    displayValue = "${String.format("%.2f", coerced)}m"
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/positionY", inputId, coerced)
-            }
-        },
-        unit = "m",
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
     
     val positionZ = selectedChannel.getParameter("positionZ")
     var positionZValue by remember { 
-        mutableStateOf(positionZ.displayValue.replace("m", "").trim()) 
+        mutableStateOf(positionZ.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
     }
     
     LaunchedEffect(inputId) {
-        positionZValue = selectedChannel.getParameter("positionZ").displayValue.replace("m", "").trim()
+        positionXValue = selectedChannel.getParameter("positionX").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
+        positionYValue = selectedChannel.getParameter("positionY").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
+        positionZValue = selectedChannel.getParameter("positionZ").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
     }
     
-    ParameterNumberBox(
-        label = "Position Z",
-        value = positionZValue,
-        onValueChange = { newValue ->
-            positionZValue = newValue
-        },
-        onValueCommit = { committedValue ->
-            committedValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(-50f, 50f)
-                positionZValue = String.format("%.2f", coerced)
-                selectedChannel.setParameter("positionZ", InputParameterValue(
-                    normalizedValue = (coerced + 50f) / 100f,
-                    stringValue = "",
-                    displayValue = "${String.format("%.2f", coerced)}m"
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/positionZ", inputId, coerced)
+    Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        // Left column: Number boxes
+        Column(
+            modifier = Modifier.weight(0.5f),
+            verticalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+        ) {
+            ParameterNumberBox(
+                label = "Position X",
+                value = positionXValue,
+                onValueChange = { newValue ->
+                    positionXValue = newValue
+                },
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val coerced = value.coerceIn(-50f, 50f)
+                        positionXValue = String.format("%.2f", coerced)
+                        selectedChannel.setParameter("positionX", InputParameterValue(
+                            normalizedValue = (coerced + 50f) / 100f,
+                            stringValue = "",
+                            displayValue = "${String.format("%.2f", coerced)}m"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/positionX", inputId, coerced)
+                    }
+                },
+                unit = "m",
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            ParameterNumberBox(
+                label = "Position Y",
+                value = positionYValue,
+                onValueChange = { newValue ->
+                    positionYValue = newValue
+                },
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val coerced = value.coerceIn(-50f, 50f)
+                        positionYValue = String.format("%.2f", coerced)
+                        selectedChannel.setParameter("positionY", InputParameterValue(
+                            normalizedValue = (coerced + 50f) / 100f,
+                            stringValue = "",
+                            displayValue = "${String.format("%.2f", coerced)}m"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/positionY", inputId, coerced)
+                    }
+                },
+                unit = "m",
+                modifier = Modifier.fillMaxWidth()
+            )
+            
+            ParameterNumberBox(
+                label = "Position Z",
+                value = positionZValue,
+                onValueChange = { newValue ->
+                    positionZValue = newValue
+                },
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val coerced = value.coerceIn(-50f, 50f)
+                        positionZValue = String.format("%.2f", coerced)
+                        selectedChannel.setParameter("positionZ", InputParameterValue(
+                            normalizedValue = (coerced + 50f) / 100f,
+                            stringValue = "",
+                            displayValue = "${String.format("%.2f", coerced)}m"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/positionZ", inputId, coerced)
+                    }
+                },
+                unit = "m",
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+        
+        // Right column: Joystick and Z slider side by side
+        Row(
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.weight(0.5f)
+        ) {
+            // Joystick for X and Y position control
+            Joystick(
+                modifier = Modifier
+                    .size(150.dp)
+                    .padding(start = verticalSliderWidth * 2),
+                onPositionChanged = { x, y ->
+                    // x and y are in range -1 to 1
+                    // Speed: 10 units per second, joystick reports every 100ms
+                    // So increment = joystickValue * 10 * 0.1 = joystickValue * 1.0
+                    val xIncrement = x * 1.0f
+                    val yIncrement = y * 1.0f
+                    
+                    // Only update if joystick is deflected
+                    if (xIncrement != 0f) {
+                        positionXValue.toFloatOrNull()?.let { currentX ->
+                            val newX = (currentX + xIncrement).coerceIn(-50f, 50f)
+                            positionXValue = String.format("%.2f", newX)
+                            selectedChannel.setParameter("positionX", InputParameterValue(
+                                normalizedValue = (newX + 50f) / 100f,
+                                stringValue = "",
+                                displayValue = "${String.format("%.2f", newX)}m"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/positionX", inputId, newX)
+                        }
+                    }
+                    
+                    if (yIncrement != 0f) {
+                        positionYValue.toFloatOrNull()?.let { currentY ->
+                            val newY = (currentY + yIncrement).coerceIn(-50f, 50f)
+                            positionYValue = String.format("%.2f", newY)
+                            selectedChannel.setParameter("positionY", InputParameterValue(
+                                normalizedValue = (newY + 50f) / 100f,
+                                stringValue = "",
+                                displayValue = "${String.format("%.2f", newY)}m"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/positionY", inputId, newY)
+                        }
+                    }
+                }
+            )
+            
+            // Auto-return vertical slider for Z position control
+            var zSliderValue by remember { mutableStateOf(0f) }
+            
+            LaunchedEffect(zSliderValue) {
+                // Continuously update position Z while slider is deflected
+                while (zSliderValue != 0f) {
+                    val zIncrement = zSliderValue * 1.0f
+                    
+                    positionZValue.toFloatOrNull()?.let { currentZ ->
+                        val newZ = (currentZ + zIncrement).coerceIn(-50f, 50f)
+                        positionZValue = String.format("%.2f", newZ)
+                        selectedChannel.setParameter("positionZ", InputParameterValue(
+                            normalizedValue = (newZ + 50f) / 100f,
+                            stringValue = "",
+                            displayValue = "${String.format("%.2f", newZ)}m"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/positionZ", inputId, newZ)
+                    }
+                    
+                    kotlinx.coroutines.delay(100) // Update every 100ms
+                }
             }
-        },
-        unit = "m",
-        modifier = Modifier.fillMaxWidth()
-    )
+            
+            AutoCenterBidirectionalSlider(
+                value = zSliderValue,
+                onValueChange = { newValue ->
+                    zSliderValue = newValue
+                },
+                modifier = Modifier
+                    .height(verticalSliderHeight)
+                    .width(verticalSliderWidth),
+                sliderColor = Color(0xFF4CAF50),
+                trackBackgroundColor = Color.DarkGray,
+                orientation = SliderOrientation.VERTICAL,
+                valueRange = -1f..1f,
+                centerValue = 0f
+            )
+        }
+    }
     
     Spacer(modifier = Modifier.height(spacing.smallSpacing))
     

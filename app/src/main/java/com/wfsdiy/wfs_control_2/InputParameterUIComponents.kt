@@ -131,7 +131,7 @@ fun ParameterTextButton(
                 disabledContentColor = Color.Gray
             ),
             modifier = Modifier
-                .width(150.dp)
+                .width(210.dp)
                 .height(48.dp)
         ) {
             Text(
