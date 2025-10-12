@@ -152,24 +152,47 @@ fun BasicDial(
                                 val dy = touchPosition.y - center.y
                                 val touchAngle = normalizeAngle(atan2(dy, dx).toDegrees())
                                 
-                                // Check if touch is in dead zone (60° to 120°)
-                                val isInDeadZone = touchAngle >= 60f && touchAngle <= 120f
+                                // Define snap zones just beyond the ends of the active range
+                                // Active range: 120° to 420°/60° (300° total)
+                                // Dead zone: 60° to 120° (bottom center)
+                                // Snap to min zone: 110° to 120° (just before active range starts)
+                                // Snap to max zone: 60° to 70° (just after active range ends)
+                                val snapZoneSize = 10f
+                                val minSnapZoneStart = startAngle - snapZoneSize  // 110°
+                                val minSnapZoneEnd = startAngle  // 120°
+                                val maxSnapZoneStart = 60f  // Right after active range ends
+                                val maxSnapZoneEnd = 60f + snapZoneSize  // 70°
                                 
-                                if (!isInDeadZone) {
-                                    // Convert touch angle to dial value
-                                    // startAngle is 120°, range is 300°
-                                    // We need to map touchAngle (0-360) to value (0-1)
-                                    val relativeAngle = if (touchAngle >= startAngle) {
-                                        touchAngle - startAngle
-                                    } else {
-                                        360f - startAngle + touchAngle
+                                // Check which zone we're in
+                                when {
+                                    // Snap to minimum (0) zone
+                                    touchAngle >= minSnapZoneStart && touchAngle < minSnapZoneEnd -> {
+                                        onValueChange(0f)
                                     }
-                                    
-                                    // Convert to value (0.0 to 1.0) within the active angle range
-                                    val newValue = (relativeAngle / activeAngleRange).coerceIn(0f, 1f)
-                                    onValueChange(newValue)
+                                    // Snap to maximum (1) zone
+                                    touchAngle >= maxSnapZoneStart && touchAngle < maxSnapZoneEnd -> {
+                                        onValueChange(1f)
+                                    }
+                                    // Regular dead zone (no action)
+                                    touchAngle >= maxSnapZoneEnd && touchAngle < minSnapZoneStart -> {
+                                        // In dead zone, don't update the value
+                                    }
+                                    // Active range - normal operation
+                                    else -> {
+                                        // Convert touch angle to dial value
+                                        // startAngle is 120°, range is 300°
+                                        // We need to map touchAngle (0-360) to value (0-1)
+                                        val relativeAngle = if (touchAngle >= startAngle) {
+                                            touchAngle - startAngle
+                                        } else {
+                                            360f - startAngle + touchAngle
+                                        }
+                                        
+                                        // Convert to value (0.0 to 1.0) within the active angle range
+                                        val newValue = (relativeAngle / activeAngleRange).coerceIn(0f, 1f)
+                                        onValueChange(newValue)
+                                    }
                                 }
-                                // If in dead zone, don't update the value (keep current value)
                             }
                         )
                     }
@@ -634,8 +657,9 @@ fun AngleDial(
                             try {
                                 val parsedValue = textFieldValue.text.toFloatOrNull()
                                 if (parsedValue != null) {
-                                    // Apply modulo operation: ((x+180)%360)-180
-                                    val normalizedValue = ((parsedValue + 180f) % 360f) - 180f
+                                    // Round to nearest integer and apply modulo operation: ((x+540)%360)-180
+                                    val roundedValue = parsedValue.roundToInt().toFloat()
+                                    val normalizedValue = ((roundedValue + 540f) % 360f) - 180f
                                     onValueChange(normalizedValue)
                                 }
                             } catch (e: NumberFormatException) {
@@ -655,6 +679,19 @@ fun AngleDial(
                                     text = text,
                                     selection = androidx.compose.ui.text.TextRange(0, text.length)
                                 )
+                            } else {
+                                // Apply rounding and modulo when focus is lost
+                                try {
+                                    val parsedValue = textFieldValue.text.toFloatOrNull()
+                                    if (parsedValue != null) {
+                                        // Round to nearest integer and apply modulo operation: ((x+540)%360)-180
+                                        val roundedValue = parsedValue.roundToInt().toFloat()
+                                        val normalizedValue = ((roundedValue + 540f) % 360f) - 180f
+                                        onValueChange(normalizedValue)
+                                    }
+                                } catch (e: NumberFormatException) {
+                                    // Ignore invalid input
+                                }
                             }
                         }
                 )

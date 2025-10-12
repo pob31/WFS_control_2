@@ -12,7 +12,7 @@ Input;Max Speed Active;maxSpeedActive;/remoteInput/maxSpeedActive;YES;YES;Text b
 Input;Max Speed;maxSpeed;/remoteInput/maxSpeed;YES;YES;Dial;FLOAT;0.01;20.0;x*19.99+0.01;m/s;;
 Input;Height Factor;heightFactor;/remoteInput/heightFactor;YES;YES;Dial;INT;0;100;x*100;%;;
 Input;Attenuation Law;attenuationLaw;/remoteInput/attenuationLaw;YES;YES;Text button;INT;0;1;;;"Log; 1/d²";
-Input;Distance Attenuation;distanceAttenuation;/remoteInput/distanceAttenuation;YES;YES;Dial;FLOAT;-6.0;0.0;(x*6.0)-0.6;dB/m;;visible if AttenuationLaw == 0 (shares the same position as Dial distanceRatio)
+Input;Distance Attenuation;distanceAttenuation;/remoteInput/distanceAttenuation;YES;YES;Dial;FLOAT;-6.0;0.0;(6.0*x)-6.0;dB/m;;visible if AttenuationLaw == 0 (shares the same position as Dial distanceRatio)
 Input;Distance Ratio;distanceRatio;/remoteInput/distanceRatio;YES;YES;Dial;FLOAT;0.1;10.0;pow(10.0,(x*2.0)-1.0);x;;visible if AttenuationLaw == 1 (shares the same position as Dial distanceAttenuation)
 Input;Common Attenuation;commonAtten;/remoteInput/commonAtten;YES;YES;Dial;INT;0;100;x*100;%;;
 Directivity;Directivity;directivity;/remoteInput/directivity;YES;YES;H range Slider;INT;2;360;(x*358)+2;°;;

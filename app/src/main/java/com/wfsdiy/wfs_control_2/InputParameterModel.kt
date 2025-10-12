@@ -286,7 +286,7 @@ object InputParameterDefinitions {
             dataType = ParameterType.FLOAT,
             minValue = -6f,
             maxValue = 0f,
-            formula = "(x*6.0)-0.6",
+            formula = "(x*6.0)-6.0",
             unit = "dB/m",
             note = "visible if AttenuationLaw == 0 (shares the same position as Dial distanceRatio)"
         ),

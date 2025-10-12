@@ -154,8 +154,12 @@ fun ParameterNumberBox(
     unit: String = "",
     enabled: Boolean = true,
     isDecimal: Boolean = true,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onValueCommit: ((String) -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
+    var lastCommittedValue by remember { mutableStateOf(value) }
+    
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -197,10 +201,23 @@ fun ParameterNumberBox(
                     imeAction = ImeAction.Done
                 ),
                 keyboardActions = KeyboardActions(
-                    onDone = { /* Handle done */ }
+                    onDone = {
+                        focusManager.clearFocus()
+                        if (value != lastCommittedValue) {
+                            onValueCommit?.invoke(value)
+                            lastCommittedValue = value
+                        }
+                    }
                 ),
                 singleLine = true,
-                modifier = Modifier.weight(1f)
+                modifier = Modifier
+                    .weight(1f)
+                    .onFocusChanged { focusState: FocusState ->
+                        if (!focusState.isFocused && value != lastCommittedValue) {
+                            onValueCommit?.invoke(value)
+                            lastCommittedValue = value
+                        }
+                    }
             )
             
             if (unit.isNotEmpty()) {

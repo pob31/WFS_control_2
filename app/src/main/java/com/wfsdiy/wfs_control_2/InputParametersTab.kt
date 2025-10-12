@@ -13,6 +13,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlin.math.pow
+import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
 @Composable
@@ -343,10 +344,13 @@ private fun RenderInputSection(
         value = positionXValue,
         onValueChange = { newValue ->
             positionXValue = newValue
-            newValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(0f, 50f)
+        },
+        onValueCommit = { committedValue ->
+            committedValue.toFloatOrNull()?.let { value ->
+                val coerced = value.coerceIn(-50f, 50f)
+                positionXValue = String.format("%.2f", coerced)
                 selectedChannel.setParameter("positionX", InputParameterValue(
-                    normalizedValue = coerced / 50f,
+                    normalizedValue = (coerced + 50f) / 100f,
                     stringValue = "",
                     displayValue = "${String.format("%.2f", coerced)}m"
                 ))
@@ -373,10 +377,13 @@ private fun RenderInputSection(
         value = positionYValue,
         onValueChange = { newValue ->
             positionYValue = newValue
-            newValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(0f, 50f)
+        },
+        onValueCommit = { committedValue ->
+            committedValue.toFloatOrNull()?.let { value ->
+                val coerced = value.coerceIn(-50f, 50f)
+                positionYValue = String.format("%.2f", coerced)
                 selectedChannel.setParameter("positionY", InputParameterValue(
-                    normalizedValue = coerced / 50f,
+                    normalizedValue = (coerced + 50f) / 100f,
                     stringValue = "",
                     displayValue = "${String.format("%.2f", coerced)}m"
                 ))
@@ -403,10 +410,13 @@ private fun RenderInputSection(
         value = positionZValue,
         onValueChange = { newValue ->
             positionZValue = newValue
-            newValue.toFloatOrNull()?.let { value ->
-                val coerced = value.coerceIn(0f, 50f)
+        },
+        onValueCommit = { committedValue ->
+            committedValue.toFloatOrNull()?.let { value ->
+                val coerced = value.coerceIn(-50f, 50f)
+                positionZValue = String.format("%.2f", coerced)
                 selectedChannel.setParameter("positionZ", InputParameterValue(
-                    normalizedValue = coerced / 50f,
+                    normalizedValue = (coerced + 50f) / 100f,
                     stringValue = "",
                     displayValue = "${String.format("%.2f", coerced)}m"
                 ))
@@ -588,8 +598,10 @@ private fun RenderInputSection(
             isValueEditable = true,
             onDisplayedValueChange = {},
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(0, 100)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt()
+                    val coercedValue = roundedValue.coerceIn(0, 100)
                     val normalized = coercedValue / 100f
                     heightFactorValue = normalized
                     heightFactorDisplayValue = coercedValue.toString()
@@ -799,8 +811,10 @@ private fun RenderInputSection(
             isValueEditable = true,
             onDisplayedValueChange = {},
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(0, 100)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt()
+                    val coercedValue = roundedValue.coerceIn(0, 100)
                     val normalized = coercedValue / 100f
                     commonAttenValue = normalized
                     commonAttenDisplayValue = coercedValue.toString()
@@ -868,8 +882,10 @@ private fun RenderDirectivitySection(
             displayedValue = directivityDisplayValue,
             isValueEditable = true,
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.toFloat().coerceIn(2f, 360f)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt().toFloat()
+                    val coercedValue = roundedValue.coerceIn(2f, 360f)
                     val expansionValue = (coercedValue - 2f) / 358f
                     directivityValue = expansionValue
                     directivityDisplayValue = coercedValue.toInt().toString()
@@ -902,13 +918,15 @@ private fun RenderDirectivitySection(
         AngleDial(
             value = rotationValue,
             onValueChange = { newValue ->
-                rotationValue = newValue
+                // Clamp to -180 to 180 using ((x+540)%360)-180
+                val clamped = ((newValue + 540f) % 360f) - 180f
+                rotationValue = clamped
                 selectedChannel.setParameter("rotation", InputParameterValue(
-                    normalizedValue = (newValue + 180f) / 360f,
+                    normalizedValue = (clamped + 180f) / 360f,
                     stringValue = "",
-                    displayValue = "${newValue.toInt()}°"
+                    displayValue = "${clamped.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/rotation", inputId, newValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/rotation", inputId, clamped.toInt())
             },
             dialColor = Color.DarkGray,
             indicatorColor = Color.White,
@@ -963,8 +981,10 @@ private fun RenderDirectivitySection(
                 isValueEditable = true,
                 onDisplayedValueChange = { /* Typing handled internally */ },
                 onValueCommit = { committedValue ->
-                    committedValue.toIntOrNull()?.let { value ->
-                        val coercedValue = value.toFloat().coerceIn(-90f, 90f)
+                    committedValue.toFloatOrNull()?.let { value ->
+                        // Round to nearest integer
+                        val roundedValue = value.roundToInt().toFloat()
+                        val coercedValue = roundedValue.coerceIn(-90f, 90f)
                         tiltValue = coercedValue
                         tiltDisplayValue = coercedValue.toInt().toString()
                         val normalized = (coercedValue + 90f) / 180f
@@ -1651,8 +1671,10 @@ private fun RenderFloorReflectionsSection(
             isValueEditable = true,
             onDisplayedValueChange = { /* Typing handled internally */ },
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(20, 20000)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt()
+                    val coercedValue = roundedValue.coerceIn(20, 20000)
                     val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
                     FRlowCutFreqValue = normalized
@@ -1738,8 +1760,10 @@ private fun RenderFloorReflectionsSection(
             isValueEditable = true,
             onDisplayedValueChange = { /* Typing handled internally */ },
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(20, 20000)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt()
+                    val coercedValue = roundedValue.coerceIn(20, 20000)
                     val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
                     FRhighShelfFreqValue = normalized
@@ -1917,8 +1941,10 @@ private fun RenderFloorReflectionsSection(
             isValueEditable = true,
             onDisplayedValueChange = {},
             onValueCommit = { committedValue ->
-                committedValue.toIntOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(0, 100)
+                committedValue.toFloatOrNull()?.let { value ->
+                    // Round to nearest integer
+                    val roundedValue = value.roundToInt()
+                    val coercedValue = roundedValue.coerceIn(0, 100)
                     val normalized = coercedValue / 100f
                     FRdiffusionValue = normalized
                     FRdiffusionDisplayValue = coercedValue.toString()
@@ -2111,13 +2137,14 @@ private fun RenderLFOSection(
     
     // Phase
     val LFOphase = selectedChannel.getParameter("LFOphase")
-    var LFOphaseValue by remember { mutableStateOf(0f) } // 0 to 360 range directly
+    var LFOphaseValue by remember { mutableStateOf(0f) }
     
     LaunchedEffect(inputId) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphase"]!!
         val currentParam = selectedChannel.getParameter("LFOphase")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
-        LFOphaseValue = actualValue
+        // Convert 0-360 to -180 to 180
+        LFOphaseValue = ((actualValue + 540f) % 360f) - 180f
     }
     
     Column {
@@ -2125,14 +2152,18 @@ private fun RenderLFOSection(
         AngleDial(
             value = LFOphaseValue,
             onValueChange = { newValue ->
-                LFOphaseValue = newValue
-                val normalized = newValue / 360f
+                // Clamp to -180 to 180 using ((x+540)%360)-180
+                val clamped = ((newValue + 540f) % 360f) - 180f
+                LFOphaseValue = clamped
+                // Convert back to 0-360 for storage
+                val storageValue = if (clamped < 0f) clamped + 360f else clamped
+                val normalized = storageValue / 360f
                 selectedChannel.setParameter("LFOphase", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${newValue.toInt()}°"
+                    displayValue = "${clamped.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphase", inputId, newValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphase", inputId, storageValue.toInt())
             },
             dialColor = if (isLFOEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isLFOEnabled) Color.White else Color.Gray,
@@ -2610,7 +2641,8 @@ private fun RenderLFOSection(
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseX"]!!
         val currentParam = selectedChannel.getParameter("LFOphaseX")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
-        LFOphaseXValue = actualValue
+        // Convert 0-360 to -180 to 180
+        LFOphaseXValue = ((actualValue + 540f) % 360f) - 180f
     }
     
     val isPhaseXEnabled = isLFOEnabled && LFOshapeXIndex != 0
@@ -2620,14 +2652,18 @@ private fun RenderLFOSection(
         AngleDial(
             value = LFOphaseXValue,
             onValueChange = { newValue ->
-                LFOphaseXValue = newValue
-                val normalized = newValue / 360f
+                // Clamp to -180 to 180 using ((x+540)%360)-180
+                val clamped = ((newValue + 540f) % 360f) - 180f
+                LFOphaseXValue = clamped
+                // Convert back to 0-360 for storage
+                val storageValue = if (clamped < 0f) clamped + 360f else clamped
+                val normalized = storageValue / 360f
                 selectedChannel.setParameter("LFOphaseX", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${newValue.toInt()}°"
+                    displayValue = "${clamped.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseX", inputId, newValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseX", inputId, storageValue.toInt())
             },
             dialColor = if (isPhaseXEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseXEnabled) Color.White else Color.Gray,
@@ -2649,7 +2685,8 @@ private fun RenderLFOSection(
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseY"]!!
         val currentParam = selectedChannel.getParameter("LFOphaseY")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
-        LFOphaseYValue = actualValue
+        // Convert 0-360 to -180 to 180
+        LFOphaseYValue = ((actualValue + 540f) % 360f) - 180f
     }
     
     val isPhaseYEnabled = isLFOEnabled && LFOshapeYIndex != 0
@@ -2659,14 +2696,18 @@ private fun RenderLFOSection(
         AngleDial(
             value = LFOphaseYValue,
             onValueChange = { newValue ->
-                LFOphaseYValue = newValue
-                val normalized = newValue / 360f
+                // Clamp to -180 to 180 using ((x+540)%360)-180
+                val clamped = ((newValue + 540f) % 360f) - 180f
+                LFOphaseYValue = clamped
+                // Convert back to 0-360 for storage
+                val storageValue = if (clamped < 0f) clamped + 360f else clamped
+                val normalized = storageValue / 360f
                 selectedChannel.setParameter("LFOphaseY", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${newValue.toInt()}°"
+                    displayValue = "${clamped.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseY", inputId, newValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseY", inputId, storageValue.toInt())
             },
             dialColor = if (isPhaseYEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseYEnabled) Color.White else Color.Gray,
@@ -2688,7 +2729,8 @@ private fun RenderLFOSection(
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseZ"]!!
         val currentParam = selectedChannel.getParameter("LFOphaseZ")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
-        LFOphaseZValue = actualValue
+        // Convert 0-360 to -180 to 180
+        LFOphaseZValue = ((actualValue + 540f) % 360f) - 180f
     }
     
     val isPhaseZEnabled = isLFOEnabled && LFOshapeZIndex != 0
@@ -2698,14 +2740,18 @@ private fun RenderLFOSection(
         AngleDial(
             value = LFOphaseZValue,
             onValueChange = { newValue ->
-                LFOphaseZValue = newValue
-                val normalized = newValue / 360f
+                // Clamp to -180 to 180 using ((x+540)%360)-180
+                val clamped = ((newValue + 540f) % 360f) - 180f
+                LFOphaseZValue = clamped
+                // Convert back to 0-360 for storage
+                val storageValue = if (clamped < 0f) clamped + 360f else clamped
+                val normalized = storageValue / 360f
                 selectedChannel.setParameter("LFOphaseZ", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${newValue.toInt()}°"
+                    displayValue = "${clamped.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseZ", inputId, newValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseZ", inputId, storageValue.toInt())
             },
             dialColor = if (isPhaseZEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseZEnabled) Color.White else Color.Gray,
