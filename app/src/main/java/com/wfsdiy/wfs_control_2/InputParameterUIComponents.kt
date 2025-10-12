@@ -15,7 +15,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusState
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -222,8 +225,12 @@ fun ParameterTextBox(
     onValueChange: (String) -> Unit,
     enabled: Boolean = true,
     maxLength: Int = 24,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onValueCommit: ((String) -> Unit)? = null
 ) {
+    val focusManager = LocalFocusManager.current
+    var lastCommittedValue by remember { mutableStateOf(value) }
+    
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -250,11 +257,26 @@ fun ParameterTextBox(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp),
+                .height(48.dp)
+                .onFocusChanged { focusState: FocusState ->
+                    if (!focusState.isFocused && value != lastCommittedValue) {
+                        onValueCommit?.invoke(value)
+                        lastCommittedValue = value
+                    }
+                },
             textStyle = TextStyle(fontSize = 14.sp),
             singleLine = true,
             keyboardOptions = KeyboardOptions(
                 imeAction = ImeAction.Done
+            ),
+            keyboardActions = KeyboardActions(
+                onDone = {
+                    focusManager.clearFocus()
+                    if (value != lastCommittedValue) {
+                        onValueCommit?.invoke(value)
+                        lastCommittedValue = value
+                    }
+                }
             )
         )
     }

@@ -167,12 +167,14 @@ private fun RenderInputSection(
         value = inputNameValue,
         onValueChange = { newValue ->
             inputNameValue = newValue
+        },
+        onValueCommit = { committedValue ->
             selectedChannel.setParameter("inputName", InputParameterValue(
                 normalizedValue = 0f,
-                stringValue = newValue,
-                displayValue = newValue
+                stringValue = committedValue,
+                displayValue = committedValue
             ))
-            viewModel.sendInputParameterString("/remoteInput/inputName", inputId, newValue)
+            viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
         },
         modifier = Modifier.fillMaxWidth()
     )
