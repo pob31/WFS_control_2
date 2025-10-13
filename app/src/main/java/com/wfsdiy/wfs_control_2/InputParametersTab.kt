@@ -12,6 +12,7 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
@@ -191,7 +192,7 @@ private fun RenderInputSection(
         attenuationValue = selectedChannel.getParameter("attenuation").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["attenuation"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, attenuationValue)
-        attenuationDisplayValue = String.format("%.2f", actualValue)
+        attenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -206,11 +207,11 @@ private fun RenderInputSection(
                     attenuationValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["attenuation"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    attenuationDisplayValue = String.format("%.2f", actualValue)
+                    attenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("attenuation", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/attenuation", inputId, actualValue)
                 },
@@ -227,11 +228,11 @@ private fun RenderInputSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         attenuationValue = normalized
-                        attenuationDisplayValue = String.format("%.2f", coercedValue)
+                        attenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("attenuation", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/attenuation", inputId, coercedValue)
                     }
@@ -246,7 +247,7 @@ private fun RenderInputSection(
     
     // Delay/Latency
     val delayLatency = selectedChannel.getParameter("delayLatency")
-    var delayLatencyValue by remember { mutableStateOf(0f) } // -100 to 100 range directly
+    var delayLatencyValue by remember { mutableFloatStateOf(0f) } // -100 to 100 range directly
     var delayLatencyDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -254,7 +255,7 @@ private fun RenderInputSection(
         val currentParam = selectedChannel.getParameter("delayLatency")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
         delayLatencyValue = actualValue
-        delayLatencyDisplayValue = String.format("%.2f", actualValue)
+        delayLatencyDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -263,12 +264,12 @@ private fun RenderInputSection(
             value = delayLatencyValue,
             onValueChange = { newValue ->
                 delayLatencyValue = newValue
-                delayLatencyDisplayValue = String.format("%.2f", newValue)
+                delayLatencyDisplayValue = String.format(Locale.US, "%.2f", newValue)
                 val normalized = (newValue + 100f) / 200f
                 selectedChannel.setParameter("delayLatency", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", newValue)}ms"
+                    displayValue = "${String.format(Locale.US, "%.2f", newValue)}ms"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, newValue)
             },
@@ -284,12 +285,12 @@ private fun RenderInputSection(
                 committedValue.toFloatOrNull()?.let { value ->
                     val coercedValue = value.coerceIn(-100f, 100f)
                     delayLatencyValue = coercedValue
-                    delayLatencyDisplayValue = String.format("%.2f", coercedValue)
+                    delayLatencyDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     val normalized = (coercedValue + 100f) / 200f
                     selectedChannel.setParameter("delayLatency", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}ms"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}ms"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, coercedValue)
                 }
@@ -304,7 +305,7 @@ private fun RenderInputSection(
     // Minimal Latency
     val minimalLatency = selectedChannel.getParameter("minimalLatency")
     var minLatencyIndex by remember { 
-        mutableStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -369,11 +370,11 @@ private fun RenderInputSection(
                 onValueCommit = { committedValue ->
                     committedValue.toFloatOrNull()?.let { value ->
                         val coerced = value.coerceIn(-50f, 50f)
-                        positionXValue = String.format("%.2f", coerced)
+                        positionXValue = String.format(Locale.US, "%.2f", coerced)
                         selectedChannel.setParameter("positionX", InputParameterValue(
                             normalizedValue = (coerced + 50f) / 100f,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coerced)}m"
+                            displayValue = "${String.format(Locale.US, "%.2f", coerced)}m"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/positionX", inputId, coerced)
                     }
@@ -391,11 +392,11 @@ private fun RenderInputSection(
                 onValueCommit = { committedValue ->
                     committedValue.toFloatOrNull()?.let { value ->
                         val coerced = value.coerceIn(-50f, 50f)
-                        positionYValue = String.format("%.2f", coerced)
+                        positionYValue = String.format(Locale.US, "%.2f", coerced)
                         selectedChannel.setParameter("positionY", InputParameterValue(
                             normalizedValue = (coerced + 50f) / 100f,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coerced)}m"
+                            displayValue = "${String.format(Locale.US, "%.2f", coerced)}m"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/positionY", inputId, coerced)
                     }
@@ -413,11 +414,11 @@ private fun RenderInputSection(
                 onValueCommit = { committedValue ->
                     committedValue.toFloatOrNull()?.let { value ->
                         val coerced = value.coerceIn(-50f, 50f)
-                        positionZValue = String.format("%.2f", coerced)
+                        positionZValue = String.format(Locale.US, "%.2f", coerced)
                         selectedChannel.setParameter("positionZ", InputParameterValue(
                             normalizedValue = (coerced + 50f) / 100f,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coerced)}m"
+                            displayValue = "${String.format(Locale.US, "%.2f", coerced)}m"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/positionZ", inputId, coerced)
                     }
@@ -449,11 +450,11 @@ private fun RenderInputSection(
                     if (xIncrement != 0f) {
                         positionXValue.toFloatOrNull()?.let { currentX ->
                             val newX = (currentX + xIncrement).coerceIn(-50f, 50f)
-                            positionXValue = String.format("%.2f", newX)
+                            positionXValue = String.format(Locale.US, "%.2f", newX)
                             selectedChannel.setParameter("positionX", InputParameterValue(
                                 normalizedValue = (newX + 50f) / 100f,
                                 stringValue = "",
-                                displayValue = "${String.format("%.2f", newX)}m"
+                                displayValue = "${String.format(Locale.US, "%.2f", newX)}m"
                             ))
                             viewModel.sendInputParameterFloat("/remoteInput/positionX", inputId, newX)
                         }
@@ -462,11 +463,11 @@ private fun RenderInputSection(
                     if (yIncrement != 0f) {
                         positionYValue.toFloatOrNull()?.let { currentY ->
                             val newY = (currentY + yIncrement).coerceIn(-50f, 50f)
-                            positionYValue = String.format("%.2f", newY)
+                            positionYValue = String.format(Locale.US, "%.2f", newY)
                             selectedChannel.setParameter("positionY", InputParameterValue(
                                 normalizedValue = (newY + 50f) / 100f,
                                 stringValue = "",
-                                displayValue = "${String.format("%.2f", newY)}m"
+                                displayValue = "${String.format(Locale.US, "%.2f", newY)}m"
                             ))
                             viewModel.sendInputParameterFloat("/remoteInput/positionY", inputId, newY)
                         }
@@ -475,7 +476,7 @@ private fun RenderInputSection(
             )
             
             // Auto-return vertical slider for Z position control
-            var zSliderValue by remember { mutableStateOf(0f) }
+            var zSliderValue by remember { mutableFloatStateOf(0f) }
             
             LaunchedEffect(zSliderValue) {
                 // Continuously update position Z while slider is deflected
@@ -484,11 +485,11 @@ private fun RenderInputSection(
                     
                     positionZValue.toFloatOrNull()?.let { currentZ ->
                         val newZ = (currentZ + zIncrement).coerceIn(-50f, 50f)
-                        positionZValue = String.format("%.2f", newZ)
+                        positionZValue = String.format(Locale.US, "%.2f", newZ)
                         selectedChannel.setParameter("positionZ", InputParameterValue(
                             normalizedValue = (newZ + 50f) / 100f,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", newZ)}m"
+                            displayValue = "${String.format(Locale.US, "%.2f", newZ)}m"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/positionZ", inputId, newZ)
                     }
@@ -519,7 +520,7 @@ private fun RenderInputSection(
     // Cluster
     val cluster = selectedChannel.getParameter("cluster")
     var clusterIndex by remember { 
-        mutableStateOf(cluster.normalizedValue.toInt().coerceIn(0, 10)) 
+        mutableIntStateOf(cluster.normalizedValue.toInt().coerceIn(0, 10)) 
     }
     
     LaunchedEffect(inputId) {
@@ -548,7 +549,7 @@ private fun RenderInputSection(
     // Max Speed Active
     val maxSpeedActive = selectedChannel.getParameter("maxSpeedActive")
     var maxSpeedActiveIndex by remember { 
-        mutableStateOf(maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -600,13 +601,13 @@ private fun RenderInputSection(
                 maxSpeedValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["maxSpeed"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                maxSpeedDisplayValue = String.format("%.2f", actualValue)
+                maxSpeedDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 
                 // Update the state in the channel
                 val updatedValue = InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}m/s"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m/s"
                 )
                 selectedChannel.setParameter("maxSpeed", updatedValue)
                 
@@ -625,13 +626,13 @@ private fun RenderInputSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     maxSpeedValue = normalized
-                    maxSpeedDisplayValue = String.format("%.2f", coercedValue)
+                    maxSpeedDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     
                     // Update the state in the channel
                     val updatedValue = InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m/s"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m/s"
                     )
                     selectedChannel.setParameter("maxSpeed", updatedValue)
                     
@@ -710,7 +711,7 @@ private fun RenderInputSection(
     // Attenuation Law
     val attenuationLaw = selectedChannel.getParameter("attenuationLaw")
     var attenuationLawIndex by remember { 
-        mutableStateOf(attenuationLaw.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(attenuationLaw.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -748,7 +749,7 @@ private fun RenderInputSection(
             distanceAttenuationValue = current.normalizedValue
             val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
             val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-            distanceAttenuationDisplayValue = String.format("%.2f", actualValue)
+            distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
         }
         
         Column {
@@ -759,11 +760,11 @@ private fun RenderInputSection(
                     distanceAttenuationValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    distanceAttenuationDisplayValue = String.format("%.2f", actualValue)
+                    distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB/m"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB/m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, actualValue)
                 },
@@ -780,11 +781,11 @@ private fun RenderInputSection(
                         val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         distanceAttenuationValue = normalized
-                        distanceAttenuationDisplayValue = String.format("%.2f", coercedValue)
+                        distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB/m"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB/m"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, coercedValue)
                     }
@@ -810,7 +811,7 @@ private fun RenderInputSection(
             distanceRatioValue = current.normalizedValue
             val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
             val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-            distanceRatioDisplayValue = String.format("%.2f", actualValue)
+            distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
         }
         
         Column {
@@ -821,11 +822,11 @@ private fun RenderInputSection(
                     distanceRatioValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    distanceRatioDisplayValue = String.format("%.2f", actualValue)
+                    distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("distanceRatio", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}x"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, actualValue)
                 },
@@ -842,11 +843,11 @@ private fun RenderInputSection(
                         val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         distanceRatioValue = normalized
-                        distanceRatioDisplayValue = String.format("%.2f", coercedValue)
+                        distanceRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("distanceRatio", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}x"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, coercedValue)
                     }
@@ -933,7 +934,7 @@ private fun RenderDirectivitySection(
     
     // Directivity (Width Expansion Slider - grows from center)
     val directivity = selectedChannel.getParameter("directivity")
-    var directivityValue by remember { mutableStateOf(0f) } // 0-1 where it expands from center
+    var directivityValue by remember { mutableFloatStateOf(0f) } // 0-1 where it expands from center
     var directivityDisplayValue by remember { mutableStateOf("2") }
     
     LaunchedEffect(inputId) {
@@ -1029,7 +1030,7 @@ private fun RenderDirectivitySection(
     
     // Tilt
     val tilt = selectedChannel.getParameter("tilt")
-    var tiltValue by remember { mutableStateOf(0f) } // -90 to 90 range directly
+    var tiltValue by remember { mutableFloatStateOf(0f) } // -90 to 90 range directly
     var tiltDisplayValue by remember { mutableStateOf("0") }
     
     LaunchedEffect(inputId) {
@@ -1100,7 +1101,7 @@ private fun RenderDirectivitySection(
         HFshelfValue = selectedChannel.getParameter("HFshelf").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, HFshelfValue)
-        HFshelfDisplayValue = String.format("%.2f", actualValue)
+        HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1115,11 +1116,11 @@ private fun RenderDirectivitySection(
                     HFshelfValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    HFshelfDisplayValue = String.format("%.2f", actualValue)
+                    HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("HFshelf", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, actualValue)
                 },
@@ -1136,11 +1137,11 @@ private fun RenderDirectivitySection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         HFshelfValue = normalized
-                        HFshelfDisplayValue = String.format("%.2f", coercedValue)
+                        HFshelfDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("HFshelf", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, coercedValue)
                     }
@@ -1167,7 +1168,7 @@ private fun RenderLiveSourceSection(
     // Active
     val liveSourceActive = selectedChannel.getParameter("liveSourceActive")
     var liveSourceActiveIndex by remember { 
-        mutableStateOf(liveSourceActive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(liveSourceActive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -1196,7 +1197,7 @@ private fun RenderLiveSourceSection(
     
     // Radius (greyed out when inactive) - Width Expansion Slider
     val radius = selectedChannel.getParameter("liveSourceRadius")
-    var radiusValue by remember { mutableStateOf(0f) } // 0-1 expansion value
+    var radiusValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
     var radiusDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -1205,7 +1206,7 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
         // Map 0-50 to 0-1 expansion value
         radiusValue = actualValue / 50f
-        radiusDisplayValue = String.format("%.2f", actualValue)
+        radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -1216,12 +1217,12 @@ private fun RenderLiveSourceSection(
                 radiusValue = newValue
                 // Map 0-1 expansion to 0-50 meters
                 val actualValue = newValue * 50f
-                radiusDisplayValue = String.format("%.2f", actualValue)
+                radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 val normalized = actualValue / 50f
                 selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}m"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, actualValue)
             },
@@ -1237,11 +1238,11 @@ private fun RenderLiveSourceSection(
                     val coercedValue = value.coerceIn(0f, 50f)
                     val expansionValue = coercedValue / 50f
                     radiusValue = expansionValue
-                    radiusDisplayValue = String.format("%.2f", coercedValue)
+                    radiusDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
                         normalizedValue = expansionValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, coercedValue)
                 }
@@ -1257,7 +1258,7 @@ private fun RenderLiveSourceSection(
     // Shape
     val liveSourceShape = selectedChannel.getParameter("liveSourceShape")
     var liveSourceShapeIndex by remember { 
-        mutableStateOf(liveSourceShape.normalizedValue.toInt().coerceIn(0, 3)) 
+        mutableIntStateOf(liveSourceShape.normalizedValue.toInt().coerceIn(0, 3)) 
     }
     
     LaunchedEffect(inputId) {
@@ -1292,7 +1293,7 @@ private fun RenderLiveSourceSection(
         liveSourceAttenuationValue = selectedChannel.getParameter("liveSourceAttenuation").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceAttenuationValue)
-        liveSourceAttenuationDisplayValue = String.format("%.2f", actualValue)
+        liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1307,11 +1308,11 @@ private fun RenderLiveSourceSection(
                     liveSourceAttenuationValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourceAttenuationDisplayValue = String.format("%.2f", actualValue)
+                    liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, actualValue)
                 },
@@ -1328,11 +1329,11 @@ private fun RenderLiveSourceSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         liveSourceAttenuationValue = normalized
-                        liveSourceAttenuationDisplayValue = String.format("%.2f", coercedValue)
+                        liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, coercedValue)
                     }
@@ -1354,7 +1355,7 @@ private fun RenderLiveSourceSection(
         liveSourcePeakThresholdValue = selectedChannel.getParameter("liveSourcePeakThreshold").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakThresholdValue)
-        liveSourcePeakThresholdDisplayValue = String.format("%.2f", actualValue)
+        liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1369,11 +1370,11 @@ private fun RenderLiveSourceSection(
                     liveSourcePeakThresholdValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourcePeakThresholdDisplayValue = String.format("%.2f", actualValue)
+                    liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, actualValue)
                 },
@@ -1390,11 +1391,11 @@ private fun RenderLiveSourceSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         liveSourcePeakThresholdValue = normalized
-                        liveSourcePeakThresholdDisplayValue = String.format("%.2f", coercedValue)
+                        liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, coercedValue)
                     }
@@ -1419,7 +1420,7 @@ private fun RenderLiveSourceSection(
         liveSourcePeakRatioValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        liveSourcePeakRatioDisplayValue = String.format("%.2f", actualValue)
+        liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -1430,11 +1431,11 @@ private fun RenderLiveSourceSection(
                 liveSourcePeakRatioValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                liveSourcePeakRatioDisplayValue = String.format("%.2f", actualValue)
+                liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = String.format("%.2f", actualValue)
+                    displayValue = String.format(Locale.US, "%.2f", actualValue)
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, actualValue)
             },
@@ -1451,11 +1452,11 @@ private fun RenderLiveSourceSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     liveSourcePeakRatioValue = normalized
-                    liveSourcePeakRatioDisplayValue = String.format("%.2f", coercedValue)
+                    liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = String.format("%.2f", coercedValue)
+                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, coercedValue)
                 }
@@ -1476,7 +1477,7 @@ private fun RenderLiveSourceSection(
         liveSourceSlowThresholdValue = selectedChannel.getParameter("liveSourceSlowThreshold").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowThresholdValue)
-        liveSourceSlowThresholdDisplayValue = String.format("%.2f", actualValue)
+        liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1491,11 +1492,11 @@ private fun RenderLiveSourceSection(
                     liveSourceSlowThresholdValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourceSlowThresholdDisplayValue = String.format("%.2f", actualValue)
+                    liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, actualValue)
                 },
@@ -1512,11 +1513,11 @@ private fun RenderLiveSourceSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         liveSourceSlowThresholdValue = normalized
-                        liveSourceSlowThresholdDisplayValue = String.format("%.2f", coercedValue)
+                        liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, coercedValue)
                     }
@@ -1541,7 +1542,7 @@ private fun RenderLiveSourceSection(
         liveSourceSlowRatioValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        liveSourceSlowRatioDisplayValue = String.format("%.2f", actualValue)
+        liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -1552,11 +1553,11 @@ private fun RenderLiveSourceSection(
                 liveSourceSlowRatioValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                liveSourceSlowRatioDisplayValue = String.format("%.2f", actualValue)
+                liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = String.format("%.2f", actualValue)
+                    displayValue = String.format(Locale.US, "%.2f", actualValue)
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, actualValue)
             },
@@ -1573,11 +1574,11 @@ private fun RenderLiveSourceSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     liveSourceSlowRatioValue = normalized
-                    liveSourceSlowRatioDisplayValue = String.format("%.2f", coercedValue)
+                    liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = String.format("%.2f", coercedValue)
+                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, coercedValue)
                 }
@@ -1603,7 +1604,7 @@ private fun RenderFloorReflectionsSection(
     // Active
     val FRactive = selectedChannel.getParameter("FRactive")
     var FRactiveIndex by remember { 
-        mutableStateOf(FRactive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(FRactive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -1639,7 +1640,7 @@ private fun RenderFloorReflectionsSection(
         FRattenuationValue = selectedChannel.getParameter("FRattentuation").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRattenuationValue)
-        FRattenuationDisplayValue = String.format("%.2f", actualValue)
+        FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1654,11 +1655,11 @@ private fun RenderFloorReflectionsSection(
                     FRattenuationValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    FRattenuationDisplayValue = String.format("%.2f", actualValue)
+                    FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("FRattentuation", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, actualValue)
                 },
@@ -1675,11 +1676,11 @@ private fun RenderFloorReflectionsSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         FRattenuationValue = normalized
-                        FRattenuationDisplayValue = String.format("%.2f", coercedValue)
+                        FRattenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("FRattentuation", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, coercedValue)
                     }
@@ -1695,7 +1696,7 @@ private fun RenderFloorReflectionsSection(
     // Low Cut Active
     val FRlowCutActive = selectedChannel.getParameter("FRlowCutActive")
     var FRlowCutActiveIndex by remember { 
-        mutableStateOf(FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -1784,7 +1785,7 @@ private fun RenderFloorReflectionsSection(
     // High Shelf Active
     val FRhighShelfActive = selectedChannel.getParameter("FRhighShelfActive")
     var FRhighShelfActiveIndex by remember { 
-        mutableStateOf(FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -1879,7 +1880,7 @@ private fun RenderFloorReflectionsSection(
         FRhighShelfGainValue = selectedChannel.getParameter("FRhighShelfGain").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfGainValue)
-        FRhighShelfGainDisplayValue = String.format("%.2f", actualValue)
+        FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Box(
@@ -1894,11 +1895,11 @@ private fun RenderFloorReflectionsSection(
                     FRhighShelfGainValue = newValue
                     val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
                     val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    FRhighShelfGainDisplayValue = String.format("%.2f", actualValue)
+                    FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                     selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
                         normalizedValue = newValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", actualValue)}dB"
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, actualValue)
                 },
@@ -1915,11 +1916,11 @@ private fun RenderFloorReflectionsSection(
                         val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                         val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                         FRhighShelfGainValue = normalized
-                        FRhighShelfGainDisplayValue = String.format("%.2f", coercedValue)
+                        FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                         selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
                             normalizedValue = normalized,
                             stringValue = "",
-                            displayValue = "${String.format("%.2f", coercedValue)}dB"
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                         ))
                         viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, coercedValue)
                     }
@@ -1941,7 +1942,7 @@ private fun RenderFloorReflectionsSection(
         FRhighShelfSlopeValue = selectedChannel.getParameter("FRhighShelfSlope").normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfSlopeValue)
-        FRhighShelfSlopeDisplayValue = String.format("%.2f", actualValue)
+        FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -1952,11 +1953,11 @@ private fun RenderFloorReflectionsSection(
                 FRhighShelfSlopeValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                FRhighShelfSlopeDisplayValue = String.format("%.2f", actualValue)
+                FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = String.format("%.2f", actualValue)
+                    displayValue = String.format(Locale.US, "%.2f", actualValue)
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, actualValue)
             },
@@ -1973,11 +1974,11 @@ private fun RenderFloorReflectionsSection(
                     val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     FRhighShelfSlopeValue = normalized
-                    FRhighShelfSlopeDisplayValue = String.format("%.2f", coercedValue)
+                    FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = String.format("%.2f", coercedValue)
+                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, coercedValue)
                 }
@@ -2061,7 +2062,7 @@ private fun RenderJitterSection(
     
     // Jitter - Width Expansion Slider
     val jitter = selectedChannel.getParameter("jitter")
-    var jitterValue by remember { mutableStateOf(0f) } // 0-1 expansion value
+    var jitterValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
     var jitterDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -2071,7 +2072,7 @@ private fun RenderJitterSection(
         // Map 0-10 to 0-1 expansion value (formula uses pow(x,2), so reverse it)
         // Since formula is 10*pow(x,2), we have actualValue = 10*x^2, so x = sqrt(actualValue/10)
         jitterValue = if (actualValue > 0) kotlin.math.sqrt(actualValue / 10f) else 0f
-        jitterDisplayValue = String.format("%.2f", actualValue)
+        jitterDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -2082,13 +2083,13 @@ private fun RenderJitterSection(
                 jitterValue = newValue
                 // Map 0-1 expansion using the formula: 10*pow(x,2)
                 val actualValue = 10f * newValue.pow(2)
-                jitterDisplayValue = String.format("%.2f", actualValue)
+                jitterDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 // For normalized storage, we use the sqrt of the normalized actual value
                 val normalized = newValue
                 selectedChannel.setParameter("jitter", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}m"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/jitter", inputId, actualValue)
             },
@@ -2105,11 +2106,11 @@ private fun RenderJitterSection(
                     // Reverse the formula: x = sqrt(actualValue/10)
                     val expansionValue = if (coercedValue > 0) kotlin.math.sqrt(coercedValue / 10f) else 0f
                     jitterValue = expansionValue
-                    jitterDisplayValue = String.format("%.2f", coercedValue)
+                    jitterDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("jitter", InputParameterValue(
                         normalizedValue = expansionValue,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/jitter", inputId, coercedValue)
                 }
@@ -2135,7 +2136,7 @@ private fun RenderLFOSection(
     // Active
     val LFOactive = selectedChannel.getParameter("LFOactive")
     var LFOactiveIndex by remember { 
-        mutableStateOf(LFOactive.normalizedValue.toInt().coerceIn(0, 1)) 
+        mutableIntStateOf(LFOactive.normalizedValue.toInt().coerceIn(0, 1)) 
     }
     
     LaunchedEffect(inputId) {
@@ -2174,7 +2175,7 @@ private fun RenderLFOSection(
         LFOperiodValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOperiod"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        LFOperiodDisplayValue = String.format("%.2f", actualValue)
+        LFOperiodDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
@@ -2185,11 +2186,11 @@ private fun RenderLFOSection(
                 LFOperiodValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["LFOperiod"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                LFOperiodDisplayValue = String.format("%.2f", actualValue)
+                LFOperiodDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("LFOperiod", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}s"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}s"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOperiod", inputId, actualValue)
             },
@@ -2206,11 +2207,11 @@ private fun RenderLFOSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     LFOperiodValue = normalized
-                    LFOperiodDisplayValue = String.format("%.2f", coercedValue)
+                    LFOperiodDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("LFOperiod", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}s"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}s"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOperiod", inputId, coercedValue)
                 }
@@ -2224,7 +2225,7 @@ private fun RenderLFOSection(
     
     // Phase
     val LFOphase = selectedChannel.getParameter("LFOphase")
-    var LFOphaseValue by remember { mutableStateOf(0f) }
+    var LFOphaseValue by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(inputId) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphase"]!!
@@ -2267,7 +2268,7 @@ private fun RenderLFOSection(
     // Shape X
     val LFOshapeX = selectedChannel.getParameter("LFOshapeX")
     var LFOshapeXIndex by remember { 
-        mutableStateOf(LFOshapeX.normalizedValue.toInt().coerceIn(0, 8)) 
+        mutableIntStateOf(LFOshapeX.normalizedValue.toInt().coerceIn(0, 8)) 
     }
     
     LaunchedEffect(inputId) {
@@ -2298,7 +2299,7 @@ private fun RenderLFOSection(
     // Shape Y
     val LFOshapeY = selectedChannel.getParameter("LFOshapeY")
     var LFOshapeYIndex by remember { 
-        mutableStateOf(LFOshapeY.normalizedValue.toInt().coerceIn(0, 8)) 
+        mutableIntStateOf(LFOshapeY.normalizedValue.toInt().coerceIn(0, 8)) 
     }
     
     LaunchedEffect(inputId) {
@@ -2329,7 +2330,7 @@ private fun RenderLFOSection(
     // Shape Z
     val LFOshapeZ = selectedChannel.getParameter("LFOshapeZ")
     var LFOshapeZIndex by remember { 
-        mutableStateOf(LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8)) 
+        mutableIntStateOf(LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8)) 
     }
     
     LaunchedEffect(inputId) {
@@ -2369,7 +2370,7 @@ private fun RenderLFOSection(
         LFOrateXValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateX"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        LFOrateXDisplayValue = String.format("%.2f", actualValue)
+        LFOrateXDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isRateXEnabled = isLFOEnabled && LFOshapeXIndex != 0
@@ -2382,11 +2383,11 @@ private fun RenderLFOSection(
                 LFOrateXValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["LFOrateX"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                LFOrateXDisplayValue = String.format("%.2f", actualValue)
+                LFOrateXDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("LFOrateX", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}x"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOrateX", inputId, actualValue)
             },
@@ -2403,11 +2404,11 @@ private fun RenderLFOSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     LFOrateXValue = normalized
-                    LFOrateXDisplayValue = String.format("%.2f", coercedValue)
+                    LFOrateXDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("LFOrateX", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}x"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOrateX", inputId, coercedValue)
                 }
@@ -2431,7 +2432,7 @@ private fun RenderLFOSection(
         LFOrateYValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateY"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        LFOrateYDisplayValue = String.format("%.2f", actualValue)
+        LFOrateYDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isRateYEnabled = isLFOEnabled && LFOshapeYIndex != 0
@@ -2444,11 +2445,11 @@ private fun RenderLFOSection(
                 LFOrateYValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["LFOrateY"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                LFOrateYDisplayValue = String.format("%.2f", actualValue)
+                LFOrateYDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("LFOrateY", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}x"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOrateY", inputId, actualValue)
             },
@@ -2465,11 +2466,11 @@ private fun RenderLFOSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     LFOrateYValue = normalized
-                    LFOrateYDisplayValue = String.format("%.2f", coercedValue)
+                    LFOrateYDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("LFOrateY", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}x"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOrateY", inputId, coercedValue)
                 }
@@ -2493,7 +2494,7 @@ private fun RenderLFOSection(
         LFOrateZValue = current.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateZ"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
-        LFOrateZDisplayValue = String.format("%.2f", actualValue)
+        LFOrateZDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isRateZEnabled = isLFOEnabled && LFOshapeZIndex != 0
@@ -2506,11 +2507,11 @@ private fun RenderLFOSection(
                 LFOrateZValue = newValue
                 val definition = InputParameterDefinitions.parametersByVariableName["LFOrateZ"]!!
                 val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                LFOrateZDisplayValue = String.format("%.2f", actualValue)
+                LFOrateZDisplayValue = String.format(Locale.US, "%.2f", actualValue)
                 selectedChannel.setParameter("LFOrateZ", InputParameterValue(
                     normalizedValue = newValue,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}x"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOrateZ", inputId, actualValue)
             },
@@ -2527,11 +2528,11 @@ private fun RenderLFOSection(
                     val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                     val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                     LFOrateZValue = normalized
-                    LFOrateZDisplayValue = String.format("%.2f", coercedValue)
+                    LFOrateZDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     selectedChannel.setParameter("LFOrateZ", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}x"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOrateZ", inputId, coercedValue)
                 }
@@ -2545,7 +2546,7 @@ private fun RenderLFOSection(
     
     // Amplitude X
     val LFOamplitudeX = selectedChannel.getParameter("LFOamplitudeX")
-    var LFOamplitudeXValue by remember { mutableStateOf(0f) }
+    var LFOamplitudeXValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeXDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -2553,7 +2554,7 @@ private fun RenderLFOSection(
         val currentParam = selectedChannel.getParameter("LFOamplitudeX")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
         LFOamplitudeXValue = actualValue
-        LFOamplitudeXDisplayValue = String.format("%.2f", actualValue)
+        LFOamplitudeXDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isAmplitudeXEnabled = isLFOEnabled && LFOshapeXIndex != 0
@@ -2564,12 +2565,12 @@ private fun RenderLFOSection(
             value = LFOamplitudeXValue,
             onValueChange = { newValue ->
                 LFOamplitudeXValue = newValue
-                LFOamplitudeXDisplayValue = String.format("%.2f", newValue)
+                LFOamplitudeXDisplayValue = String.format(Locale.US, "%.2f", newValue)
                 val normalized = newValue / 50f
                 selectedChannel.setParameter("LFOamplitudeX", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", newValue)}m"
+                    displayValue = "${String.format(Locale.US, "%.2f", newValue)}m"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeX", inputId, newValue)
             },
@@ -2585,12 +2586,12 @@ private fun RenderLFOSection(
                 committedValue.toFloatOrNull()?.let { value ->
                     val coercedValue = value.coerceIn(0f, 50f)
                     LFOamplitudeXValue = coercedValue
-                    LFOamplitudeXDisplayValue = String.format("%.2f", coercedValue)
+                    LFOamplitudeXDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     val normalized = coercedValue / 50f
                     selectedChannel.setParameter("LFOamplitudeX", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeX", inputId, coercedValue)
                 }
@@ -2604,7 +2605,7 @@ private fun RenderLFOSection(
     
     // Amplitude Y
     val LFOamplitudeY = selectedChannel.getParameter("LFOamplitudeY")
-    var LFOamplitudeYValue by remember { mutableStateOf(0f) }
+    var LFOamplitudeYValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeYDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -2612,7 +2613,7 @@ private fun RenderLFOSection(
         val currentParam = selectedChannel.getParameter("LFOamplitudeY")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
         LFOamplitudeYValue = actualValue
-        LFOamplitudeYDisplayValue = String.format("%.2f", actualValue)
+        LFOamplitudeYDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isAmplitudeYEnabled = isLFOEnabled && LFOshapeYIndex != 0
@@ -2623,12 +2624,12 @@ private fun RenderLFOSection(
             value = LFOamplitudeYValue,
             onValueChange = { newValue ->
                 LFOamplitudeYValue = newValue
-                LFOamplitudeYDisplayValue = String.format("%.2f", newValue)
+                LFOamplitudeYDisplayValue = String.format(Locale.US, "%.2f", newValue)
                 val normalized = newValue / 50f
                 selectedChannel.setParameter("LFOamplitudeY", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", newValue)}m"
+                    displayValue = "${String.format(Locale.US, "%.2f", newValue)}m"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeY", inputId, newValue)
             },
@@ -2644,12 +2645,12 @@ private fun RenderLFOSection(
                 committedValue.toFloatOrNull()?.let { value ->
                     val coercedValue = value.coerceIn(0f, 50f)
                     LFOamplitudeYValue = coercedValue
-                    LFOamplitudeYDisplayValue = String.format("%.2f", coercedValue)
+                    LFOamplitudeYDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     val normalized = coercedValue / 50f
                     selectedChannel.setParameter("LFOamplitudeY", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeY", inputId, coercedValue)
                 }
@@ -2663,7 +2664,7 @@ private fun RenderLFOSection(
     
     // Amplitude Z
     val LFOamplitudeZ = selectedChannel.getParameter("LFOamplitudeZ")
-    var LFOamplitudeZValue by remember { mutableStateOf(0f) }
+    var LFOamplitudeZValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeZDisplayValue by remember { mutableStateOf("0.00") }
     
     LaunchedEffect(inputId) {
@@ -2671,7 +2672,7 @@ private fun RenderLFOSection(
         val currentParam = selectedChannel.getParameter("LFOamplitudeZ")
         val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
         LFOamplitudeZValue = actualValue
-        LFOamplitudeZDisplayValue = String.format("%.2f", actualValue)
+        LFOamplitudeZDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     val isAmplitudeZEnabled = isLFOEnabled && LFOshapeZIndex != 0
@@ -2682,12 +2683,12 @@ private fun RenderLFOSection(
             value = LFOamplitudeZValue,
             onValueChange = { newValue ->
                 LFOamplitudeZValue = newValue
-                LFOamplitudeZDisplayValue = String.format("%.2f", newValue)
+                LFOamplitudeZDisplayValue = String.format(Locale.US, "%.2f", newValue)
                 val normalized = newValue / 50f
                 selectedChannel.setParameter("LFOamplitudeZ", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", newValue)}m"
+                    displayValue = "${String.format(Locale.US, "%.2f", newValue)}m"
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeZ", inputId, newValue)
             },
@@ -2703,12 +2704,12 @@ private fun RenderLFOSection(
                 committedValue.toFloatOrNull()?.let { value ->
                     val coercedValue = value.coerceIn(0f, 50f)
                     LFOamplitudeZValue = coercedValue
-                    LFOamplitudeZDisplayValue = String.format("%.2f", coercedValue)
+                    LFOamplitudeZDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
                     val normalized = coercedValue / 50f
                     selectedChannel.setParameter("LFOamplitudeZ", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format("%.2f", coercedValue)}m"
+                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/LFOamplitudeZ", inputId, coercedValue)
                 }
@@ -2722,7 +2723,7 @@ private fun RenderLFOSection(
     
     // Phase X
     val LFOphaseX = selectedChannel.getParameter("LFOphaseX")
-    var LFOphaseXValue by remember { mutableStateOf(0f) }
+    var LFOphaseXValue by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(inputId) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseX"]!!
@@ -2766,7 +2767,7 @@ private fun RenderLFOSection(
     
     // Phase Y
     val LFOphaseY = selectedChannel.getParameter("LFOphaseY")
-    var LFOphaseYValue by remember { mutableStateOf(0f) }
+    var LFOphaseYValue by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(inputId) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseY"]!!
@@ -2810,7 +2811,7 @@ private fun RenderLFOSection(
     
     // Phase Z
     val LFOphaseZ = selectedChannel.getParameter("LFOphaseZ")
-    var LFOphaseZValue by remember { mutableStateOf(0f) }
+    var LFOphaseZValue by remember { mutableFloatStateOf(0f) }
     
     LaunchedEffect(inputId) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseZ"]!!
@@ -2855,7 +2856,7 @@ private fun RenderLFOSection(
     // Gyrophone (at the end as per CSV)
     val LFOgyrophone = selectedChannel.getParameter("LFOgyrophone")
     var LFOgyrophoneIndex by remember { 
-        mutableStateOf((LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2)) 
+        mutableIntStateOf((LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2)) 
     }
     
     LaunchedEffect(inputId) {

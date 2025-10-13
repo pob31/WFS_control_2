@@ -148,7 +148,7 @@ fun InputMapTab(
         val currentTouchPosition: Offset
     )
     val vectorControls = remember { mutableStateMapOf<Long, VectorControl>() }
-    var vectorControlsUpdateTrigger: Int by remember { mutableStateOf(0) }
+    var vectorControlsUpdateTrigger: Int by remember { mutableIntStateOf(0) }
     
     // Calculate responsive marker radius
     val configuration = LocalConfiguration.current

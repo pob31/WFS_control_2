@@ -13,6 +13,7 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -120,7 +121,7 @@ fun SettingsTab(
                     label = { Text("Input Map - Select Mode") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     modifier = Modifier
-                        .menuAnchor()
+                        .menuAnchor(MenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth(),
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(
                         focusedTextColor = Color.White,
@@ -138,7 +139,7 @@ fun SettingsTab(
                     onDismissRequest = { expanded = false },
                     modifier = Modifier.background(Color.DarkGray)
                 ) {
-                    SecondaryTouchMode.values().forEach { mode ->
+                    SecondaryTouchMode.entries.forEach { mode ->
                         DropdownMenuItem(
                             text = { 
                                 Text(

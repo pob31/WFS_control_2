@@ -35,6 +35,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 import kotlin.math.*
 import kotlinx.coroutines.delay
 
@@ -113,7 +114,7 @@ fun BasicDial(
     dialColor: Color = Color.DarkGray,
     indicatorColor: Color = Color.White,
     trackColor: Color = Color.Blue,
-    displayedValue: String = String.format("%.1f", value * 100f),
+    displayedValue: String = String.format(Locale.US, "%.1f", value * 100f),
     valueUnit: String = "%",
     isValueEditable: Boolean = false,
     onDisplayedValueChange: (String) -> Unit = {},
@@ -338,7 +339,7 @@ fun RotaryKnob(
     knobColor: Color = Color.DarkGray,
     indicatorColor: Color = Color.White,
     trackColor: Color = Color.Blue,
-    displayedValue: String = String.format("%.1f", value),
+    displayedValue: String = String.format(Locale.US, "%.1f", value),
     valueUnit: String = "",
     isValueEditable: Boolean = false,
     onDisplayedValueChange: (String) -> Unit = {},
@@ -526,7 +527,7 @@ fun AngleDial(
     dialColor: Color = Color.DarkGray,
     indicatorColor: Color = Color.White,
     trackColor: Color = Color.Blue,
-    displayedValue: String = String.format("%.1f", value),
+    displayedValue: String = String.format(Locale.US, "%.1f", value),
     isValueEditable: Boolean = true,
     onDisplayedValueChange: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
@@ -628,12 +629,12 @@ fun AngleDial(
             contentAlignment = Alignment.Center
         ) {
             if (isValueEditable) {
-                var textFieldValue by remember { mutableStateOf(TextFieldValue(String.format("%.1f", value))) }
+                var textFieldValue by remember { mutableStateOf(TextFieldValue(String.format(Locale.US, "%.1f", value))) }
                 val focusManager = LocalFocusManager.current
                 
                 // Update text when value changes
                 LaunchedEffect(value) {
-                    textFieldValue = TextFieldValue(String.format("%.1f", value))
+                    textFieldValue = TextFieldValue(String.format(Locale.US, "%.1f", value))
                 }
                 
                 BasicTextField(
@@ -705,7 +706,7 @@ fun AngleDial(
                 )
             } else {
                 Text(
-                    text = "${String.format("%.1f", value)}°",
+                    text = "${String.format(Locale.US, "%.1f", value)}°",
                     color = valueTextColor,
                     fontSize = (dialSize.value * 0.12f).sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center

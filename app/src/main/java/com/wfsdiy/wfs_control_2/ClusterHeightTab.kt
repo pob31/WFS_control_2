@@ -30,6 +30,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -183,7 +184,7 @@ fun ClusterHeightTab(
                 val denormalizedHeight = normalizedHeight * stageHeight
                 val adjustedHeight = denormalizedHeight - stageOriginZ
                 val heightText = if (draggingSliderIndex == index) { // Check against the correct index
-                    String.format("%.1fm", adjustedHeight)
+                    String.format(Locale.US, "%.1fm", adjustedHeight)
                 } else {
                     ""
                 }

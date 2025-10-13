@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import java.util.Locale
 import java.util.concurrent.ConcurrentLinkedQueue
 
 class OscService : Service() {
@@ -302,7 +303,7 @@ class OscService : Service() {
                 InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${String.format("%.2f", actualValue)}${definition.unit ?: ""}"
+                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}${definition.unit ?: ""}"
                 )
             }
             else -> return

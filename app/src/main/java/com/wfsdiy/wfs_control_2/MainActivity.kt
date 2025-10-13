@@ -179,7 +179,7 @@ fun saveSecondaryTouchMode(context: Context, mode: SecondaryTouchMode) {
 fun loadSecondaryTouchMode(context: Context): SecondaryTouchMode {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
     val modeNumber = sharedPrefs.getInt(KEY_SECONDARY_TOUCH_MODE, -1) // Default to DISABLED
-    return SecondaryTouchMode.values().find { it.modeNumber == modeNumber } ?: SecondaryTouchMode.DISABLED
+    return SecondaryTouchMode.entries.find { it.modeNumber == modeNumber } ?: SecondaryTouchMode.DISABLED
 }
 
 fun saveClusterSecondaryTouchEnabled(context: Context, enabled: Boolean) {
@@ -296,8 +296,8 @@ fun WFSControlApp() {
     var clusterSecondaryTouchEnabled by rememberSaveable { mutableStateOf(true) }
     
     // Screen dimensions for OSC operations
-    var screenWidthPx by remember { mutableStateOf(0f) }
-    var screenHeightPx by remember { mutableStateOf(0f) }
+    var screenWidthPx by remember { mutableFloatStateOf(0f) }
+    var screenHeightPx by remember { mutableFloatStateOf(0f) }
     var oscServiceStarted by remember { mutableStateOf(false) }
     
     var markers by remember {
@@ -370,7 +370,7 @@ fun WFSControlApp() {
     var clusterNormalizedHeights by rememberSaveable { mutableStateOf(List(10) { 0.2f }) }
     var initialClusterLayoutDone by remember { mutableStateOf(false) }
 
-    var selectedTab by remember { mutableStateOf(0) }
+    var selectedTab by remember { mutableIntStateOf(0) }
     val tabs = listOf("Input Map", "Lock Input Markers", "View Input Markers", "Input Parameters", "Cluster Map", "Cluster Height", "Array Adjust", "Settings")
 
     val dynamicTabFontSize: TextUnit = remember(screenWidthDp) {
@@ -385,15 +385,15 @@ fun WFSControlApp() {
         height.dp
     }
 
-    var currentCanvasPixelWidth by remember { mutableStateOf(0f) }
-    var currentCanvasPixelHeight by remember { mutableStateOf(0f) }
+    var currentCanvasPixelWidth by remember { mutableFloatStateOf(0f) }
+    var currentCanvasPixelHeight by remember { mutableFloatStateOf(0f) }
 
-    var stageWidth by remember { mutableStateOf(16.0f) }
-    var stageDepth by remember { mutableStateOf(10.0f) }
-    var stageHeight by remember { mutableStateOf(7.0f) }
-    var stageOriginX by remember { mutableStateOf(8.0f) }
-    var stageOriginY by remember { mutableStateOf(0.0f) }
-    var stageOriginZ by remember { mutableStateOf(0.0f) }
+    var stageWidth by remember { mutableFloatStateOf(16.0f) }
+    var stageDepth by remember { mutableFloatStateOf(10.0f) }
+    var stageHeight by remember { mutableFloatStateOf(7.0f) }
+    var stageOriginX by remember { mutableFloatStateOf(8.0f) }
+    var stageOriginY by remember { mutableFloatStateOf(0.0f) }
+    var stageOriginZ by remember { mutableFloatStateOf(0.0f) }
 
     val serviceConnection = remember {
         object : ServiceConnection {

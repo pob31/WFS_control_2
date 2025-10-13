@@ -54,3 +54,4 @@ LFO;Phase Y;LFOphaseY;/remoteInput/LFOphaseY;YES;YES;Direction dial;INT;0;360;x*
 LFO;Phase Z;LFOphaseZ;/remoteInput/LFOphaseZ;YES;YES;Direction dial;INT;0;360;x*360;°;;Greyed out but editable when LFOactive == 0 or LFOShapeZ == 0
 LFO;Gyrophone;LFOgyrophone;/remoteInput/LFOgyrophone;YES;YES;Drop down menu;INT;-1;1;;;"Anti-Clockwise; OFF; Clockwise";Greyed out but editable when LFOactive == 0
 
+

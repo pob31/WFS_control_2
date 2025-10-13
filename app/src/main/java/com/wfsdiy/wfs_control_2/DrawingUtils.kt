@@ -8,6 +8,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
+import java.util.Locale
 import kotlin.math.abs
 import kotlin.math.min
 import kotlin.math.max
@@ -73,7 +74,7 @@ fun DrawScope.drawStageCornerLabels(
 
     pointsToDraw.forEach { point ->
         // Display the stage coordinates based on origin
-        val labelText = "(${String.format("%.1f", point.stageX)}, ${String.format("%.1f", point.stageY)})"
+        val labelText = "(${String.format(Locale.US, "%.1f", point.stageX)}, ${String.format(Locale.US, "%.1f", point.stageY)})"
         paint.textAlign = point.align
 
         // Fixed canvas positions - corners and center of top/bottom edges
@@ -198,7 +199,7 @@ fun <T> DrawScope.drawMarker(
         val adjustedX = displayX - currentStageOriginX
         val adjustedY = displayY - currentStageOriginY
 
-        val coordText = " (${String.format("%.1f", adjustedX)}, ${String.format("%.1f", adjustedY)})"
+        val coordText = " (${String.format(Locale.US, "%.1f", adjustedX)}, ${String.format(Locale.US, "%.1f", adjustedY)})"
 
         val originalTextSize = textPaint.textSize
         val originalTextAlign = textPaint.textAlign
