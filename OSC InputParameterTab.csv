@@ -2,7 +2,7 @@ Variable group;Label;Variable;OSC path;Incoming;Outgoing;UI;Type;Min;Max;Formula
 Input;Input Number;inputNumber;/remoteInput/inputNumber;no;YES;??;INT;1;64;;;;max is numberOfInputs
 Input;Input Name;inputName;/remoteInput/inputName;YES;YES;Text box;STRING;;;;;;
 Input;Attenuation;attenuation;/remoteInput/attenuation;YES;YES;V Slider;FLOAT;-92.0;0.0;20*log10(pow(10,-92./20.)+((1-pow(10,-92./20.))*pow(x,2)));dB;;
-Input;Delay/Latency comp.;delayLatency;/remoteInput/delayLatency;YES;YES;H Bidirectional slider;FLOAT;-100.0;100.0;(x*200.0)-100.0;ms;;
+Input;Latency compensation / Delay;delayLatency;/remoteInput/delayLatency;YES;YES;H Bidirectional slider;FLOAT;-100.0;100.0;(x*200.0)-100.0;ms;;
 Input;Minimal Latency;minimalLatency;/remoteInput/minimalLatency;YES;YES;Text button;INT;0;1;;;"Acoustic Precedence; Minimal Latency";
 Input;Position X;positionX;/remoteInput/positionX;YES;YES;Number box;FLOAT;0.0;50.0;;m;;incremented or decremented by horizontal axis of JoystickXY
 Input;Position Y;positionY;/remoteInput/positionY;YES;YES;Number box;FLOAT;0.0;50.0;;m;;incremented or decremented by vertical axis of JoystickXY
@@ -53,5 +53,7 @@ LFO;Phase X;LFOphaseX;/remoteInput/LFOphaseX;YES;YES;Direction dial;INT;0;360;x*
 LFO;Phase Y;LFOphaseY;/remoteInput/LFOphaseY;YES;YES;Direction dial;INT;0;360;x*360;°;;Greyed out but editable when LFOactive == 0 or LFOShapeY == 0
 LFO;Phase Z;LFOphaseZ;/remoteInput/LFOphaseZ;YES;YES;Direction dial;INT;0;360;x*360;°;;Greyed out but editable when LFOactive == 0 or LFOShapeZ == 0
 LFO;Gyrophone;LFOgyrophone;/remoteInput/LFOgyrophone;YES;YES;Drop down menu;INT;-1;1;;;"Anti-Clockwise; OFF; Clockwise";Greyed out but editable when LFOactive == 0
+
+
 
 

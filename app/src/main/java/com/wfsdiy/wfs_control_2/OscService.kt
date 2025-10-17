@@ -269,12 +269,9 @@ class OscService : Service() {
     }
     
     private fun updateInputParameterFromOsc(oscPath: String, inputId: Int, intValue: Int? = null, floatValue: Float? = null, stringValue: String? = null) {
-        val currentState = _inputParametersState.value
-        val channel = currentState.getChannel(inputId)
-        
         // Find parameter definition by OSC path
         val definition = InputParameterDefinitions.allParameters.find { it.oscPath == oscPath } ?: return
-        
+
         val paramValue = when {
             stringValue != null -> {
                 InputParameterValue(
@@ -284,10 +281,19 @@ class OscService : Service() {
                 )
             }
             intValue != null -> {
-                val normalized = InputParameterDefinitions.reverseFormula(definition, intValue.toFloat())
+                // Check if this is an ON/OFF switch that needs value inversion
+                val isOnOffSwitch = definition.enumValues != null &&
+                                   definition.enumValues.size == 2 &&
+                                   definition.enumValues[0] == "ON" &&
+                                   definition.enumValues[1] == "OFF"
+
+                // Invert for ON/OFF switches: OSC 1 (ON) -> UI index 0, OSC 0 (OFF) -> UI index 1
+                val uiValue = if (isOnOffSwitch) 1 - intValue else intValue
+
+                val normalized = InputParameterDefinitions.reverseFormula(definition, uiValue.toFloat())
                 val actualValue = InputParameterDefinitions.applyFormula(definition, normalized)
-                val displayText = if (definition.enumValues != null && intValue >= 0 && intValue < definition.enumValues.size) {
-                    definition.enumValues[intValue]
+                val displayText = if (definition.enumValues != null && uiValue >= 0 && uiValue < definition.enumValues.size) {
+                    definition.enumValues[uiValue]
                 } else {
                     "${actualValue.toInt()}${definition.unit ?: ""}"
                 }
@@ -308,9 +314,30 @@ class OscService : Service() {
             }
             else -> return
         }
-        
-        channel.setParameter(definition.variableName, paramValue)
-        _inputParametersState.value = currentState.copy()
+
+        // Get current state and update the parameter
+        val currentState = _inputParametersState.value
+        val channel = currentState.getChannel(inputId)
+
+        // Create a new parameter map for this channel with the updated parameter
+        val updatedParameters = channel.parameters.toMutableMap()
+        updatedParameters[definition.variableName] = paramValue
+
+        // Create a new channel with the updated parameters
+        val updatedChannel = InputChannelState(
+            inputId = inputId,
+            parameters = updatedParameters
+        )
+
+        // Create a new channels map with the updated channel
+        val updatedChannels = currentState.channels.toMutableMap()
+        updatedChannels[inputId] = updatedChannel
+
+        // Force StateFlow emission by creating a completely new state object
+        _inputParametersState.value = InputParametersState(
+            channels = updatedChannels,
+            selectedInputId = currentState.selectedInputId
+        )
     }
     
     fun startOscServerWithCanvasDimensions(canvasWidth: Float, canvasHeight: Float) {

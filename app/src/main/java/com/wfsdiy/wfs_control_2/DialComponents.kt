@@ -131,7 +131,7 @@ fun BasicDial(
     val activeAngleRange = 360f - deadZoneAngle // 300° active range
     val startAngle = 120f // Start angle (after dead zone)
     val currentAngle = startAngle + (value * activeAngleRange)
-    
+
     Box(
         modifier = modifier.size(dialSize),
         contentAlignment = Alignment.Center
@@ -147,12 +147,12 @@ fun BasicDial(
                             onDrag = { change, _ ->
                                 val center = Offset(size.width / 2f, size.height / 2f)
                                 val touchPosition = change.position
-                                
+
                                 // Calculate angle from center to touch position
                                 val dx = touchPosition.x - center.x
                                 val dy = touchPosition.y - center.y
                                 val touchAngle = normalizeAngle(atan2(dy, dx).toDegrees())
-                                
+
                                 // Define snap zones just beyond the ends of the active range
                                 // Active range: 120° to 420°/60° (300° total)
                                 // Dead zone: 60° to 120° (bottom center)
@@ -163,7 +163,7 @@ fun BasicDial(
                                 val minSnapZoneEnd = startAngle  // 120°
                                 val maxSnapZoneStart = 60f  // Right after active range ends
                                 val maxSnapZoneEnd = 60f + snapZoneSize  // 70°
-                                
+
                                 // Check which zone we're in
                                 when {
                                     // Snap to minimum (0) zone
@@ -188,7 +188,7 @@ fun BasicDial(
                                         } else {
                                             360f - startAngle + touchAngle
                                         }
-                                        
+
                                         // Convert to value (0.0 to 1.0) within the active angle range
                                         val newValue = (relativeAngle / activeAngleRange).coerceIn(0f, 1f)
                                         onValueChange(newValue)
@@ -327,6 +327,7 @@ fun BasicDial(
  * @param valueUnit Unit to display with the value (e.g., "°", "%", "dB")
  * @param isValueEditable Whether the displayed value can be edited
  * @param onDisplayedValueChange Callback when displayed value changes
+ * @param onValueCommit Callback when the displayed value is committed (e.g., Done key pressed)
  * @param valueTextColor Color of the value text
  * @param enabled Whether the knob is interactive
  */
@@ -343,6 +344,7 @@ fun RotaryKnob(
     valueUnit: String = "",
     isValueEditable: Boolean = false,
     onDisplayedValueChange: (String) -> Unit = {},
+    onValueCommit: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
     enabled: Boolean = true
 ) {
@@ -356,7 +358,7 @@ fun RotaryKnob(
     val startAngle = 120f // Start angle (after dead zone)
     val normalizedValue = (value - valueRange.start) / (valueRange.endInclusive - valueRange.start)
     val currentAngle = startAngle + (normalizedValue * activeAngleRange)
-    
+
     Box(
         modifier = modifier.size(knobSize),
         contentAlignment = Alignment.Center
@@ -372,15 +374,15 @@ fun RotaryKnob(
                             onDrag = { change, _ ->
                                 val center = Offset(size.width / 2f, size.height / 2f)
                                 val touchPosition = change.position
-                                
+
                                 // Calculate angle from center to touch position
                                 val dx = touchPosition.x - center.x
                                 val dy = touchPosition.y - center.y
                                 val touchAngle = normalizeAngle(atan2(dy, dx).toDegrees())
-                                
+
                                 // Check if touch is in dead zone (60° to 120°)
                                 val isInDeadZone = touchAngle >= 60f && touchAngle <= 120f
-                                
+
                                 if (!isInDeadZone) {
                                     // Convert touch angle to dial value
                                     // startAngle is 120°, range is 300°
@@ -390,10 +392,10 @@ fun RotaryKnob(
                                     } else {
                                         360f - startAngle + touchAngle
                                     }
-                                    
+
                                     // Convert to normalized value (0.0 to 1.0) within the active angle range
                                     val newNormalizedValue = (relativeAngle / activeAngleRange).coerceIn(0f, 1f)
-                                    
+
                                     // Convert back to actual value range
                                     val newValue = valueRange.start + newNormalizedValue * (valueRange.endInclusive - valueRange.start)
                                     onValueChange(newValue)
@@ -467,7 +469,14 @@ fun RotaryKnob(
         ) {
             if (isValueEditable) {
                 var textFieldValue by remember { mutableStateOf(TextFieldValue(displayedValue)) }
-                
+
+                // Update text field when displayedValue changes (from knob rotation)
+                LaunchedEffect(displayedValue) {
+                    textFieldValue = TextFieldValue(displayedValue, selection = TextRange(displayedValue.length))
+                }
+
+                val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
+
                 BasicTextField(
                     value = textFieldValue,
                     onValueChange = { newValue ->
@@ -481,7 +490,14 @@ fun RotaryKnob(
                     ),
                     singleLine = true,
                     keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Number
+                        keyboardType = KeyboardType.Decimal,
+                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                    ),
+                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                        onDone = {
+                            onValueCommit(textFieldValue.text)
+                            focusManager.clearFocus()
+                        }
                     ),
                     modifier = Modifier.size(width = knobSize * 0.6f, height = knobSize * 0.15f)
                 )
@@ -536,7 +552,7 @@ fun AngleDial(
     val responsiveSizes = getResponsiveDialSizes()
     val dialSize = responsiveSizes.dialSize
     val strokeWidth = responsiveSizes.strokeWidth
-    
+
     // Convert value (-180° to +180°) to angle (0° to 360°)
     // 0° is at bottom, 180° at top
     // Positive values go anticlockwise, negative values go clockwise
@@ -547,7 +563,7 @@ fun AngleDial(
         // Negative values: 0° to -180° clockwise (90° to -90° in Compose)
         90f + value
     }
-    
+
     Box(
         modifier = modifier.size(dialSize),
         contentAlignment = Alignment.Center

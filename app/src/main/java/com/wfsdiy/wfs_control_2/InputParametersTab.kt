@@ -154,14 +154,14 @@ private fun RenderInputSection(
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Input Name
     val inputName = selectedChannel.getParameter("inputName")
     var inputNameValue by remember { mutableStateOf(inputName.stringValue) }
-    
-    LaunchedEffect(inputId) {
-        inputNameValue = selectedChannel.getParameter("inputName").stringValue
+
+    LaunchedEffect(inputId, inputName.stringValue) {
+        inputNameValue = inputName.stringValue
     }
     
     ParameterTextBox(
@@ -187,9 +187,9 @@ private fun RenderInputSection(
     val attenuation = selectedChannel.getParameter("attenuation")
     var attenuationValue by remember { mutableStateOf(attenuation.normalizedValue) }
     var attenuationDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        attenuationValue = selectedChannel.getParameter("attenuation").normalizedValue
+
+    LaunchedEffect(inputId, attenuation.normalizedValue) {
+        attenuationValue = attenuation.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["attenuation"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, attenuationValue)
         attenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
@@ -249,17 +249,16 @@ private fun RenderInputSection(
     val delayLatency = selectedChannel.getParameter("delayLatency")
     var delayLatencyValue by remember { mutableFloatStateOf(0f) } // -100 to 100 range directly
     var delayLatencyDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, delayLatency.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["delayLatency"]!!
-        val currentParam = selectedChannel.getParameter("delayLatency")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, delayLatency.normalizedValue)
         delayLatencyValue = actualValue
         delayLatencyDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
     Column {
-        Text("Delay/Latency comp.", fontSize = 12.sp, color = Color.White)
+        Text("Latency compensation / Delay", fontSize = 12.sp, color = Color.White)
         BidirectionalSlider(
             value = delayLatencyValue,
             onValueChange = { newValue ->
@@ -304,12 +303,12 @@ private fun RenderInputSection(
     
     // Minimal Latency
     val minimalLatency = selectedChannel.getParameter("minimalLatency")
-    var minLatencyIndex by remember { 
-        mutableIntStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1)) 
+    var minLatencyIndex by remember {
+        mutableIntStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        minLatencyIndex = selectedChannel.getParameter("minimalLatency").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, minimalLatency.normalizedValue) {
+        minLatencyIndex = minimalLatency.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     ParameterTextButton(
@@ -332,24 +331,24 @@ private fun RenderInputSection(
     
     // Position X, Y, Z with Joystick and Slider controls
     val positionX = selectedChannel.getParameter("positionX")
-    var positionXValue by remember { 
-        mutableStateOf(positionX.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
+    var positionXValue by remember {
+        mutableStateOf(positionX.displayValue.replace("m", "").trim().ifEmpty { "0.00" })
     }
-    
+
     val positionY = selectedChannel.getParameter("positionY")
-    var positionYValue by remember { 
-        mutableStateOf(positionY.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
+    var positionYValue by remember {
+        mutableStateOf(positionY.displayValue.replace("m", "").trim().ifEmpty { "0.00" })
     }
-    
+
     val positionZ = selectedChannel.getParameter("positionZ")
-    var positionZValue by remember { 
-        mutableStateOf(positionZ.displayValue.replace("m", "").trim().ifEmpty { "0.00" }) 
+    var positionZValue by remember {
+        mutableStateOf(positionZ.displayValue.replace("m", "").trim().ifEmpty { "0.00" })
     }
-    
-    LaunchedEffect(inputId) {
-        positionXValue = selectedChannel.getParameter("positionX").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
-        positionYValue = selectedChannel.getParameter("positionY").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
-        positionZValue = selectedChannel.getParameter("positionZ").displayValue.replace("m", "").trim().ifEmpty { "0.00" }
+
+    LaunchedEffect(inputId, positionX.normalizedValue, positionY.normalizedValue, positionZ.normalizedValue) {
+        positionXValue = positionX.displayValue.replace("m", "").trim().ifEmpty { "0.00" }
+        positionYValue = positionY.displayValue.replace("m", "").trim().ifEmpty { "0.00" }
+        positionZValue = positionZ.displayValue.replace("m", "").trim().ifEmpty { "0.00" }
     }
     
     Row(
@@ -519,12 +518,12 @@ private fun RenderInputSection(
     
     // Cluster
     val cluster = selectedChannel.getParameter("cluster")
-    var clusterIndex by remember { 
-        mutableIntStateOf(cluster.normalizedValue.toInt().coerceIn(0, 10)) 
+    var clusterIndex by remember {
+        mutableIntStateOf(cluster.normalizedValue.toInt().coerceIn(0, 10))
     }
-    
-    LaunchedEffect(inputId) {
-        clusterIndex = selectedChannel.getParameter("cluster").normalizedValue.toInt().coerceIn(0, 10)
+
+    LaunchedEffect(inputId, cluster.normalizedValue) {
+        clusterIndex = cluster.normalizedValue.toInt().coerceIn(0, 10)
     }
     
     ParameterDropdown(
@@ -548,12 +547,12 @@ private fun RenderInputSection(
     
     // Max Speed Active
     val maxSpeedActive = selectedChannel.getParameter("maxSpeedActive")
-    var maxSpeedActiveIndex by remember { 
-        mutableIntStateOf(maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var maxSpeedActiveIndex by remember {
+        mutableIntStateOf(maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        maxSpeedActiveIndex = selectedChannel.getParameter("maxSpeedActive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, maxSpeedActive.normalizedValue) {
+        maxSpeedActiveIndex = maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     ParameterTextButton(
@@ -567,7 +566,8 @@ private fun RenderInputSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -578,15 +578,14 @@ private fun RenderInputSection(
     val maxSpeed = selectedChannel.getParameter("maxSpeed")
     val isMaxSpeedEnabled = maxSpeedActiveIndex == 0 // 0 = ON, 1 = OFF
     var maxSpeedValue by remember { mutableStateOf(maxSpeed.normalizedValue) }
-    var maxSpeedDisplayValue by remember { 
-        mutableStateOf(maxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" }) 
+    var maxSpeedDisplayValue by remember {
+        mutableStateOf(maxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" })
     }
-    
+
     // Reset state when input channel changes
-    LaunchedEffect(inputId) {
-        val currentMaxSpeed = selectedChannel.getParameter("maxSpeed")
-        maxSpeedValue = currentMaxSpeed.normalizedValue
-        maxSpeedDisplayValue = currentMaxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" }
+    LaunchedEffect(inputId, maxSpeed.normalizedValue) {
+        maxSpeedValue = maxSpeed.normalizedValue
+        maxSpeedDisplayValue = maxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" }
     }
     
     Column {
@@ -650,15 +649,14 @@ private fun RenderInputSection(
     // Height Factor
     val heightFactor = selectedChannel.getParameter("heightFactor")
     var heightFactorValue by remember { mutableStateOf(heightFactor.normalizedValue) }
-    var heightFactorDisplayValue by remember { 
-        mutableStateOf(heightFactor.displayValue.replace("%", "").trim().ifEmpty { "0" }) 
+    var heightFactorDisplayValue by remember {
+        mutableStateOf(heightFactor.displayValue.replace("%", "").trim().ifEmpty { "0" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("heightFactor")
-        heightFactorValue = current.normalizedValue
+
+    LaunchedEffect(inputId, heightFactor.normalizedValue) {
+        heightFactorValue = heightFactor.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["heightFactor"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, heightFactor.normalizedValue)
         heightFactorDisplayValue = actualValue.toInt().toString()
     }
     
@@ -710,12 +708,12 @@ private fun RenderInputSection(
     
     // Attenuation Law
     val attenuationLaw = selectedChannel.getParameter("attenuationLaw")
-    var attenuationLawIndex by remember { 
-        mutableIntStateOf(attenuationLaw.normalizedValue.toInt().coerceIn(0, 1)) 
+    var attenuationLawIndex by remember {
+        mutableIntStateOf(attenuationLaw.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        attenuationLawIndex = selectedChannel.getParameter("attenuationLaw").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, attenuationLaw.normalizedValue) {
+        attenuationLawIndex = attenuationLaw.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     ParameterTextButton(
@@ -740,15 +738,14 @@ private fun RenderInputSection(
     if (attenuationLawIndex == 0) {
         val distanceAttenuation = selectedChannel.getParameter("distanceAttenuation")
         var distanceAttenuationValue by remember { mutableStateOf(distanceAttenuation.normalizedValue) }
-        var distanceAttenuationDisplayValue by remember { 
-            mutableStateOf(distanceAttenuation.displayValue.replace("dB/m", "").trim().ifEmpty { "-6.00" }) 
+        var distanceAttenuationDisplayValue by remember {
+            mutableStateOf(distanceAttenuation.displayValue.replace("dB/m", "").trim().ifEmpty { "-6.00" })
         }
-        
-        LaunchedEffect(inputId) {
-            val current = selectedChannel.getParameter("distanceAttenuation")
-            distanceAttenuationValue = current.normalizedValue
+
+        LaunchedEffect(inputId, distanceAttenuation.normalizedValue) {
+            distanceAttenuationValue = distanceAttenuation.normalizedValue
             val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
-            val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+            val actualValue = InputParameterDefinitions.applyFormula(definition, distanceAttenuation.normalizedValue)
             distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
         }
         
@@ -802,15 +799,14 @@ private fun RenderInputSection(
     if (attenuationLawIndex == 1) {
         val distanceRatio = selectedChannel.getParameter("distanceRatio")
         var distanceRatioValue by remember { mutableStateOf(distanceRatio.normalizedValue) }
-        var distanceRatioDisplayValue by remember { 
-            mutableStateOf(distanceRatio.displayValue.replace("x", "").trim().ifEmpty { "0.1" }) 
+        var distanceRatioDisplayValue by remember {
+            mutableStateOf(distanceRatio.displayValue.replace("x", "").trim().ifEmpty { "0.1" })
         }
-        
-        LaunchedEffect(inputId) {
-            val current = selectedChannel.getParameter("distanceRatio")
-            distanceRatioValue = current.normalizedValue
+
+        LaunchedEffect(inputId, distanceRatio.normalizedValue) {
+            distanceRatioValue = distanceRatio.normalizedValue
             val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
-            val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+            val actualValue = InputParameterDefinitions.applyFormula(definition, distanceRatio.normalizedValue)
             distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
         }
         
@@ -863,15 +859,14 @@ private fun RenderInputSection(
     // Common Attenuation
     val commonAtten = selectedChannel.getParameter("commonAtten")
     var commonAttenValue by remember { mutableStateOf(commonAtten.normalizedValue) }
-    var commonAttenDisplayValue by remember { 
-        mutableStateOf(commonAtten.displayValue.replace("%", "").trim().ifEmpty { "0" }) 
+    var commonAttenDisplayValue by remember {
+        mutableStateOf(commonAtten.displayValue.replace("%", "").trim().ifEmpty { "0" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("commonAtten")
-        commonAttenValue = current.normalizedValue
+
+    LaunchedEffect(inputId, commonAtten.normalizedValue) {
+        commonAttenValue = commonAtten.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["commonAtten"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, commonAtten.normalizedValue)
         commonAttenDisplayValue = actualValue.toInt().toString()
     }
     
@@ -930,17 +925,16 @@ private fun RenderDirectivitySection(
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Directivity (Width Expansion Slider - grows from center)
     val directivity = selectedChannel.getParameter("directivity")
     var directivityValue by remember { mutableFloatStateOf(0f) } // 0-1 where it expands from center
     var directivityDisplayValue by remember { mutableStateOf("2") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, directivity.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["directivity"]!!
-        val currentParam = selectedChannel.getParameter("directivity")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, directivity.normalizedValue)
         // Map 2-360 to 0-1 expansion value (2 = 0, 360 = 1)
         directivityValue = (actualValue - 2f) / 358f
         directivityDisplayValue = actualValue.toInt().toString()
@@ -995,10 +989,9 @@ private fun RenderDirectivitySection(
     // Rotation
     val rotation = selectedChannel.getParameter("rotation")
     var rotationValue by remember { mutableStateOf((rotation.normalizedValue * 360f) - 180f) }
-    
-    LaunchedEffect(inputId) {
-        val currentRotation = selectedChannel.getParameter("rotation")
-        rotationValue = (currentRotation.normalizedValue * 360f) - 180f
+
+    LaunchedEffect(inputId, rotation.normalizedValue) {
+        rotationValue = (rotation.normalizedValue * 360f) - 180f
     }
     
     Column {
@@ -1032,11 +1025,10 @@ private fun RenderDirectivitySection(
     val tilt = selectedChannel.getParameter("tilt")
     var tiltValue by remember { mutableFloatStateOf(0f) } // -90 to 90 range directly
     var tiltDisplayValue by remember { mutableStateOf("0") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, tilt.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["tilt"]!!
-        val currentParam = selectedChannel.getParameter("tilt")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, tilt.normalizedValue)
         tiltValue = actualValue
         tiltDisplayValue = actualValue.toInt().toString()
     }
@@ -1096,11 +1088,11 @@ private fun RenderDirectivitySection(
     val HFshelf = selectedChannel.getParameter("HFshelf")
     var HFshelfValue by remember { mutableStateOf(HFshelf.normalizedValue) }
     var HFshelfDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        HFshelfValue = selectedChannel.getParameter("HFshelf").normalizedValue
+
+    LaunchedEffect(inputId, HFshelf.normalizedValue) {
+        HFshelfValue = HFshelf.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, HFshelfValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, HFshelf.normalizedValue)
         HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1163,16 +1155,16 @@ private fun RenderLiveSourceSection(
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Active
     val liveSourceActive = selectedChannel.getParameter("liveSourceActive")
-    var liveSourceActiveIndex by remember { 
-        mutableIntStateOf(liveSourceActive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var liveSourceActiveIndex by remember {
+        mutableIntStateOf(liveSourceActive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        liveSourceActiveIndex = selectedChannel.getParameter("liveSourceActive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, liveSourceActive.normalizedValue) {
+        liveSourceActiveIndex = liveSourceActive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     val isLiveSourceEnabled = liveSourceActiveIndex == 0 // 0 = ON, 1 = OFF
@@ -1188,7 +1180,8 @@ private fun RenderLiveSourceSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -1199,11 +1192,10 @@ private fun RenderLiveSourceSection(
     val radius = selectedChannel.getParameter("liveSourceRadius")
     var radiusValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
     var radiusDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, radius.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceRadius"]!!
-        val currentParam = selectedChannel.getParameter("liveSourceRadius")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, radius.normalizedValue)
         // Map 0-50 to 0-1 expansion value
         radiusValue = actualValue / 50f
         radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
@@ -1257,12 +1249,12 @@ private fun RenderLiveSourceSection(
     
     // Shape
     val liveSourceShape = selectedChannel.getParameter("liveSourceShape")
-    var liveSourceShapeIndex by remember { 
-        mutableIntStateOf(liveSourceShape.normalizedValue.toInt().coerceIn(0, 3)) 
+    var liveSourceShapeIndex by remember {
+        mutableIntStateOf(liveSourceShape.normalizedValue.toInt().coerceIn(0, 3))
     }
-    
-    LaunchedEffect(inputId) {
-        liveSourceShapeIndex = selectedChannel.getParameter("liveSourceShape").normalizedValue.toInt().coerceIn(0, 3)
+
+    LaunchedEffect(inputId, liveSourceShape.normalizedValue) {
+        liveSourceShapeIndex = liveSourceShape.normalizedValue.toInt().coerceIn(0, 3)
     }
     
     ParameterDropdown(
@@ -1288,11 +1280,11 @@ private fun RenderLiveSourceSection(
     val liveSourceAttenuation = selectedChannel.getParameter("liveSourceAttenuation")
     var liveSourceAttenuationValue by remember { mutableStateOf(liveSourceAttenuation.normalizedValue) }
     var liveSourceAttenuationDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        liveSourceAttenuationValue = selectedChannel.getParameter("liveSourceAttenuation").normalizedValue
+
+    LaunchedEffect(inputId, liveSourceAttenuation.normalizedValue) {
+        liveSourceAttenuationValue = liveSourceAttenuation.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceAttenuationValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceAttenuation.normalizedValue)
         liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1350,11 +1342,11 @@ private fun RenderLiveSourceSection(
     val liveSourcePeakThreshold = selectedChannel.getParameter("liveSourcePeakThreshold")
     var liveSourcePeakThresholdValue by remember { mutableStateOf(liveSourcePeakThreshold.normalizedValue) }
     var liveSourcePeakThresholdDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        liveSourcePeakThresholdValue = selectedChannel.getParameter("liveSourcePeakThreshold").normalizedValue
+
+    LaunchedEffect(inputId, liveSourcePeakThreshold.normalizedValue) {
+        liveSourcePeakThresholdValue = liveSourcePeakThreshold.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakThresholdValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakThreshold.normalizedValue)
         liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1411,15 +1403,14 @@ private fun RenderLiveSourceSection(
     // Peak Ratio
     val liveSourcePeakRatio = selectedChannel.getParameter("liveSourcePeakRatio")
     var liveSourcePeakRatioValue by remember { mutableStateOf(liveSourcePeakRatio.normalizedValue) }
-    var liveSourcePeakRatioDisplayValue by remember { 
-        mutableStateOf(liveSourcePeakRatio.displayValue.replace("", "").trim().ifEmpty { "1.00" }) 
+    var liveSourcePeakRatioDisplayValue by remember {
+        mutableStateOf(liveSourcePeakRatio.displayValue.replace("", "").trim().ifEmpty { "1.00" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("liveSourcePeakRatio")
-        liveSourcePeakRatioValue = current.normalizedValue
+
+    LaunchedEffect(inputId, liveSourcePeakRatio.normalizedValue) {
+        liveSourcePeakRatioValue = liveSourcePeakRatio.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakRatio.normalizedValue)
         liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1472,11 +1463,11 @@ private fun RenderLiveSourceSection(
     val liveSourceSlowThreshold = selectedChannel.getParameter("liveSourceSlowThreshold")
     var liveSourceSlowThresholdValue by remember { mutableStateOf(liveSourceSlowThreshold.normalizedValue) }
     var liveSourceSlowThresholdDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        liveSourceSlowThresholdValue = selectedChannel.getParameter("liveSourceSlowThreshold").normalizedValue
+
+    LaunchedEffect(inputId, liveSourceSlowThreshold.normalizedValue) {
+        liveSourceSlowThresholdValue = liveSourceSlowThreshold.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowThresholdValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowThreshold.normalizedValue)
         liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1533,15 +1524,14 @@ private fun RenderLiveSourceSection(
     // Slow Ratio
     val liveSourceSlowRatio = selectedChannel.getParameter("liveSourceSlowRatio")
     var liveSourceSlowRatioValue by remember { mutableStateOf(liveSourceSlowRatio.normalizedValue) }
-    var liveSourceSlowRatioDisplayValue by remember { 
-        mutableStateOf(liveSourceSlowRatio.displayValue.replace("", "").trim().ifEmpty { "1.00" }) 
+    var liveSourceSlowRatioDisplayValue by remember {
+        mutableStateOf(liveSourceSlowRatio.displayValue.replace("", "").trim().ifEmpty { "1.00" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("liveSourceSlowRatio")
-        liveSourceSlowRatioValue = current.normalizedValue
+
+    LaunchedEffect(inputId, liveSourceSlowRatio.normalizedValue) {
+        liveSourceSlowRatioValue = liveSourceSlowRatio.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowRatio.normalizedValue)
         liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1599,16 +1589,16 @@ private fun RenderFloorReflectionsSection(
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Active
     val FRactive = selectedChannel.getParameter("FRactive")
-    var FRactiveIndex by remember { 
-        mutableIntStateOf(FRactive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var FRactiveIndex by remember {
+        mutableIntStateOf(FRactive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        FRactiveIndex = selectedChannel.getParameter("FRactive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, FRactive.normalizedValue) {
+        FRactiveIndex = FRactive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     val isFREnabled = FRactiveIndex == 0 // 0 = ON, 1 = OFF
@@ -1624,7 +1614,8 @@ private fun RenderFloorReflectionsSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -1635,11 +1626,11 @@ private fun RenderFloorReflectionsSection(
     val FRattenuation = selectedChannel.getParameter("FRattentuation")
     var FRattenuationValue by remember { mutableStateOf(FRattenuation.normalizedValue) }
     var FRattenuationDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        FRattenuationValue = selectedChannel.getParameter("FRattentuation").normalizedValue
+
+    LaunchedEffect(inputId, FRattenuation.normalizedValue) {
+        FRattenuationValue = FRattenuation.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, FRattenuationValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRattenuation.normalizedValue)
         FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1695,12 +1686,12 @@ private fun RenderFloorReflectionsSection(
     
     // Low Cut Active
     val FRlowCutActive = selectedChannel.getParameter("FRlowCutActive")
-    var FRlowCutActiveIndex by remember { 
-        mutableIntStateOf(FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var FRlowCutActiveIndex by remember {
+        mutableIntStateOf(FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        FRlowCutActiveIndex = selectedChannel.getParameter("FRlowCutActive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, FRlowCutActive.normalizedValue) {
+        FRlowCutActiveIndex = FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     val isFRLowCutEnabled = isFREnabled && FRlowCutActiveIndex == 0
@@ -1716,7 +1707,8 @@ private fun RenderFloorReflectionsSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -1727,11 +1719,11 @@ private fun RenderFloorReflectionsSection(
     val FRlowCutFreq = selectedChannel.getParameter("FRlowCutFreq")
     var FRlowCutFreqValue by remember { mutableStateOf(FRlowCutFreq.normalizedValue) }
     var FRlowCutFreqDisplayValue by remember { mutableStateOf("20") }
-    
-    LaunchedEffect(inputId) {
-        FRlowCutFreqValue = selectedChannel.getParameter("FRlowCutFreq").normalizedValue
+
+    LaunchedEffect(inputId, FRlowCutFreq.normalizedValue) {
+        FRlowCutFreqValue = FRlowCutFreq.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, FRlowCutFreqValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRlowCutFreq.normalizedValue)
         FRlowCutFreqDisplayValue = actualValue.toInt().toString()
     }
     
@@ -1784,12 +1776,12 @@ private fun RenderFloorReflectionsSection(
     
     // High Shelf Active
     val FRhighShelfActive = selectedChannel.getParameter("FRhighShelfActive")
-    var FRhighShelfActiveIndex by remember { 
-        mutableIntStateOf(FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var FRhighShelfActiveIndex by remember {
+        mutableIntStateOf(FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        FRhighShelfActiveIndex = selectedChannel.getParameter("FRhighShelfActive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, FRhighShelfActive.normalizedValue) {
+        FRhighShelfActiveIndex = FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     val isFRHighShelfEnabled = isFREnabled && FRhighShelfActiveIndex == 0
@@ -1805,7 +1797,8 @@ private fun RenderFloorReflectionsSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -1816,11 +1809,11 @@ private fun RenderFloorReflectionsSection(
     val FRhighShelfFreq = selectedChannel.getParameter("FRhighShelfFreq")
     var FRhighShelfFreqValue by remember { mutableStateOf(FRhighShelfFreq.normalizedValue) }
     var FRhighShelfFreqDisplayValue by remember { mutableStateOf("20") }
-    
-    LaunchedEffect(inputId) {
-        FRhighShelfFreqValue = selectedChannel.getParameter("FRhighShelfFreq").normalizedValue
+
+    LaunchedEffect(inputId, FRhighShelfFreq.normalizedValue) {
+        FRhighShelfFreqValue = FRhighShelfFreq.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfFreqValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfFreq.normalizedValue)
         FRhighShelfFreqDisplayValue = actualValue.toInt().toString()
     }
     
@@ -1875,11 +1868,11 @@ private fun RenderFloorReflectionsSection(
     val FRhighShelfGain = selectedChannel.getParameter("FRhighShelfGain")
     var FRhighShelfGainValue by remember { mutableStateOf(FRhighShelfGain.normalizedValue) }
     var FRhighShelfGainDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
-        FRhighShelfGainValue = selectedChannel.getParameter("FRhighShelfGain").normalizedValue
+
+    LaunchedEffect(inputId, FRhighShelfGain.normalizedValue) {
+        FRhighShelfGainValue = FRhighShelfGain.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfGainValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfGain.normalizedValue)
         FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1937,11 +1930,11 @@ private fun RenderFloorReflectionsSection(
     val FRhighShelfSlope = selectedChannel.getParameter("FRhighShelfSlope")
     var FRhighShelfSlopeValue by remember { mutableStateOf(FRhighShelfSlope.normalizedValue) }
     var FRhighShelfSlopeDisplayValue by remember { mutableStateOf("0.10") }
-    
-    LaunchedEffect(inputId) {
-        FRhighShelfSlopeValue = selectedChannel.getParameter("FRhighShelfSlope").normalizedValue
+
+    LaunchedEffect(inputId, FRhighShelfSlope.normalizedValue) {
+        FRhighShelfSlopeValue = FRhighShelfSlope.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfSlopeValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfSlope.normalizedValue)
         FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -1993,15 +1986,14 @@ private fun RenderFloorReflectionsSection(
     // Diffusion
     val FRdiffusion = selectedChannel.getParameter("FRdiffusion")
     var FRdiffusionValue by remember { mutableStateOf(FRdiffusion.normalizedValue) }
-    var FRdiffusionDisplayValue by remember { 
-        mutableStateOf(FRdiffusion.displayValue.replace("%", "").trim().ifEmpty { "0" }) 
+    var FRdiffusionDisplayValue by remember {
+        mutableStateOf(FRdiffusion.displayValue.replace("%", "").trim().ifEmpty { "0" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("FRdiffusion")
-        FRdiffusionValue = current.normalizedValue
+
+    LaunchedEffect(inputId, FRdiffusion.normalizedValue) {
+        FRdiffusionValue = FRdiffusion.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["FRdiffusion"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, FRdiffusion.normalizedValue)
         FRdiffusionDisplayValue = actualValue.toInt().toString()
     }
     
@@ -2058,17 +2050,16 @@ private fun RenderJitterSection(
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Jitter - Width Expansion Slider
     val jitter = selectedChannel.getParameter("jitter")
     var jitterValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
     var jitterDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, jitter.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["jitter"]!!
-        val currentParam = selectedChannel.getParameter("jitter")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, jitter.normalizedValue)
         // Map 0-10 to 0-1 expansion value (formula uses pow(x,2), so reverse it)
         // Since formula is 10*pow(x,2), we have actualValue = 10*x^2, so x = sqrt(actualValue/10)
         jitterValue = if (actualValue > 0) kotlin.math.sqrt(actualValue / 10f) else 0f
@@ -2131,16 +2122,16 @@ private fun RenderLFOSection(
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing
 ) {
-    val inputId = selectedChannel.inputId
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
     
     // Active
     val LFOactive = selectedChannel.getParameter("LFOactive")
-    var LFOactiveIndex by remember { 
-        mutableIntStateOf(LFOactive.normalizedValue.toInt().coerceIn(0, 1)) 
+    var LFOactiveIndex by remember {
+        mutableIntStateOf(LFOactive.normalizedValue.toInt().coerceIn(0, 1))
     }
-    
-    LaunchedEffect(inputId) {
-        LFOactiveIndex = selectedChannel.getParameter("LFOactive").normalizedValue.toInt().coerceIn(0, 1)
+
+    LaunchedEffect(inputId, LFOactive.normalizedValue) {
+        LFOactiveIndex = LFOactive.normalizedValue.toInt().coerceIn(0, 1)
     }
     
     val isLFOEnabled = LFOactiveIndex == 0 // 0 = ON, 1 = OFF
@@ -2156,7 +2147,8 @@ private fun RenderLFOSection(
                 stringValue = "",
                 displayValue = listOf("ON", "OFF")[index]
             ))
-            viewModel.sendInputParameterInt("/remoteInput/LFOactive", inputId, index)
+            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
+            viewModel.sendInputParameterInt("/remoteInput/LFOactive", inputId, 1 - index)
         },
         modifier = Modifier.fillMaxWidth()
     )
@@ -2166,15 +2158,14 @@ private fun RenderLFOSection(
     // Period
     val LFOperiod = selectedChannel.getParameter("LFOperiod")
     var LFOperiodValue by remember { mutableStateOf(LFOperiod.normalizedValue) }
-    var LFOperiodDisplayValue by remember { 
-        mutableStateOf(LFOperiod.displayValue.replace("s", "").trim().ifEmpty { "0.01" }) 
+    var LFOperiodDisplayValue by remember {
+        mutableStateOf(LFOperiod.displayValue.replace("s", "").trim().ifEmpty { "0.01" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("LFOperiod")
-        LFOperiodValue = current.normalizedValue
+
+    LaunchedEffect(inputId, LFOperiod.normalizedValue) {
+        LFOperiodValue = LFOperiod.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOperiod"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOperiod.normalizedValue)
         LFOperiodDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -2226,11 +2217,10 @@ private fun RenderLFOSection(
     // Phase
     val LFOphase = selectedChannel.getParameter("LFOphase")
     var LFOphaseValue by remember { mutableFloatStateOf(0f) }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOphase.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphase"]!!
-        val currentParam = selectedChannel.getParameter("LFOphase")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphase.normalizedValue)
         // Convert 0-360 to -180 to 180
         LFOphaseValue = ((actualValue + 540f) % 360f) - 180f
     }
@@ -2267,16 +2257,16 @@ private fun RenderLFOSection(
     
     // Shape X
     val LFOshapeX = selectedChannel.getParameter("LFOshapeX")
-    var LFOshapeXIndex by remember { 
-        mutableIntStateOf(LFOshapeX.normalizedValue.toInt().coerceIn(0, 8)) 
+    var LFOshapeXIndex by remember {
+        mutableIntStateOf(LFOshapeX.normalizedValue.toInt().coerceIn(0, 8))
     }
-    
-    LaunchedEffect(inputId) {
-        LFOshapeXIndex = selectedChannel.getParameter("LFOshapeX").normalizedValue.toInt().coerceIn(0, 8)
+
+    LaunchedEffect(inputId, LFOshapeX.normalizedValue) {
+        LFOshapeXIndex = LFOshapeX.normalizedValue.toInt().coerceIn(0, 8)
     }
     
     val isShapeXEnabled = isLFOEnabled
-    
+
     ParameterDropdown(
         label = "Shape X",
         selectedIndex = LFOshapeXIndex,
@@ -2298,16 +2288,16 @@ private fun RenderLFOSection(
     
     // Shape Y
     val LFOshapeY = selectedChannel.getParameter("LFOshapeY")
-    var LFOshapeYIndex by remember { 
-        mutableIntStateOf(LFOshapeY.normalizedValue.toInt().coerceIn(0, 8)) 
+    var LFOshapeYIndex by remember {
+        mutableIntStateOf(LFOshapeY.normalizedValue.toInt().coerceIn(0, 8))
     }
-    
-    LaunchedEffect(inputId) {
-        LFOshapeYIndex = selectedChannel.getParameter("LFOshapeY").normalizedValue.toInt().coerceIn(0, 8)
+
+    LaunchedEffect(inputId, LFOshapeY.normalizedValue) {
+        LFOshapeYIndex = LFOshapeY.normalizedValue.toInt().coerceIn(0, 8)
     }
     
     val isShapeYEnabled = isLFOEnabled
-    
+
     ParameterDropdown(
         label = "Shape Y",
         selectedIndex = LFOshapeYIndex,
@@ -2329,16 +2319,16 @@ private fun RenderLFOSection(
     
     // Shape Z
     val LFOshapeZ = selectedChannel.getParameter("LFOshapeZ")
-    var LFOshapeZIndex by remember { 
-        mutableIntStateOf(LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8)) 
+    var LFOshapeZIndex by remember {
+        mutableIntStateOf(LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8))
     }
-    
-    LaunchedEffect(inputId) {
-        LFOshapeZIndex = selectedChannel.getParameter("LFOshapeZ").normalizedValue.toInt().coerceIn(0, 8)
+
+    LaunchedEffect(inputId, LFOshapeZ.normalizedValue) {
+        LFOshapeZIndex = LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8)
     }
     
     val isShapeZEnabled = isLFOEnabled
-    
+
     ParameterDropdown(
         label = "Shape Z",
         selectedIndex = LFOshapeZIndex,
@@ -2361,15 +2351,14 @@ private fun RenderLFOSection(
     // Rate X
     val LFOrateX = selectedChannel.getParameter("LFOrateX")
     var LFOrateXValue by remember { mutableStateOf(LFOrateX.normalizedValue) }
-    var LFOrateXDisplayValue by remember { 
-        mutableStateOf(LFOrateX.displayValue.replace("x", "").trim().ifEmpty { "0.01" }) 
+    var LFOrateXDisplayValue by remember {
+        mutableStateOf(LFOrateX.displayValue.replace("x", "").trim().ifEmpty { "0.01" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("LFOrateX")
-        LFOrateXValue = current.normalizedValue
+
+    LaunchedEffect(inputId, LFOrateX.normalizedValue) {
+        LFOrateXValue = LFOrateX.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateX"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOrateX.normalizedValue)
         LFOrateXDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -2423,15 +2412,14 @@ private fun RenderLFOSection(
     // Rate Y
     val LFOrateY = selectedChannel.getParameter("LFOrateY")
     var LFOrateYValue by remember { mutableStateOf(LFOrateY.normalizedValue) }
-    var LFOrateYDisplayValue by remember { 
-        mutableStateOf(LFOrateY.displayValue.replace("x", "").trim().ifEmpty { "0.01" }) 
+    var LFOrateYDisplayValue by remember {
+        mutableStateOf(LFOrateY.displayValue.replace("x", "").trim().ifEmpty { "0.01" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("LFOrateY")
-        LFOrateYValue = current.normalizedValue
+
+    LaunchedEffect(inputId, LFOrateY.normalizedValue) {
+        LFOrateYValue = LFOrateY.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateY"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOrateY.normalizedValue)
         LFOrateYDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -2485,15 +2473,14 @@ private fun RenderLFOSection(
     // Rate Z
     val LFOrateZ = selectedChannel.getParameter("LFOrateZ")
     var LFOrateZValue by remember { mutableStateOf(LFOrateZ.normalizedValue) }
-    var LFOrateZDisplayValue by remember { 
-        mutableStateOf(LFOrateZ.displayValue.replace("x", "").trim().ifEmpty { "0.01" }) 
+    var LFOrateZDisplayValue by remember {
+        mutableStateOf(LFOrateZ.displayValue.replace("x", "").trim().ifEmpty { "0.01" })
     }
-    
-    LaunchedEffect(inputId) {
-        val current = selectedChannel.getParameter("LFOrateZ")
-        LFOrateZValue = current.normalizedValue
+
+    LaunchedEffect(inputId, LFOrateZ.normalizedValue) {
+        LFOrateZValue = LFOrateZ.normalizedValue
         val definition = InputParameterDefinitions.parametersByVariableName["LFOrateZ"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, current.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOrateZ.normalizedValue)
         LFOrateZDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
     
@@ -2548,11 +2535,10 @@ private fun RenderLFOSection(
     val LFOamplitudeX = selectedChannel.getParameter("LFOamplitudeX")
     var LFOamplitudeXValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeXDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOamplitudeX.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOamplitudeX"]!!
-        val currentParam = selectedChannel.getParameter("LFOamplitudeX")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOamplitudeX.normalizedValue)
         LFOamplitudeXValue = actualValue
         LFOamplitudeXDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
@@ -2607,11 +2593,10 @@ private fun RenderLFOSection(
     val LFOamplitudeY = selectedChannel.getParameter("LFOamplitudeY")
     var LFOamplitudeYValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeYDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOamplitudeY.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOamplitudeY"]!!
-        val currentParam = selectedChannel.getParameter("LFOamplitudeY")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOamplitudeY.normalizedValue)
         LFOamplitudeYValue = actualValue
         LFOamplitudeYDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
@@ -2666,11 +2651,10 @@ private fun RenderLFOSection(
     val LFOamplitudeZ = selectedChannel.getParameter("LFOamplitudeZ")
     var LFOamplitudeZValue by remember { mutableFloatStateOf(0f) }
     var LFOamplitudeZDisplayValue by remember { mutableStateOf("0.00") }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOamplitudeZ.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOamplitudeZ"]!!
-        val currentParam = selectedChannel.getParameter("LFOamplitudeZ")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOamplitudeZ.normalizedValue)
         LFOamplitudeZValue = actualValue
         LFOamplitudeZDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
@@ -2724,11 +2708,10 @@ private fun RenderLFOSection(
     // Phase X
     val LFOphaseX = selectedChannel.getParameter("LFOphaseX")
     var LFOphaseXValue by remember { mutableFloatStateOf(0f) }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOphaseX.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseX"]!!
-        val currentParam = selectedChannel.getParameter("LFOphaseX")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseX.normalizedValue)
         // Convert 0-360 to -180 to 180
         LFOphaseXValue = ((actualValue + 540f) % 360f) - 180f
     }
@@ -2768,11 +2751,10 @@ private fun RenderLFOSection(
     // Phase Y
     val LFOphaseY = selectedChannel.getParameter("LFOphaseY")
     var LFOphaseYValue by remember { mutableFloatStateOf(0f) }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOphaseY.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseY"]!!
-        val currentParam = selectedChannel.getParameter("LFOphaseY")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseY.normalizedValue)
         // Convert 0-360 to -180 to 180
         LFOphaseYValue = ((actualValue + 540f) % 360f) - 180f
     }
@@ -2812,11 +2794,10 @@ private fun RenderLFOSection(
     // Phase Z
     val LFOphaseZ = selectedChannel.getParameter("LFOphaseZ")
     var LFOphaseZValue by remember { mutableFloatStateOf(0f) }
-    
-    LaunchedEffect(inputId) {
+
+    LaunchedEffect(inputId, LFOphaseZ.normalizedValue) {
         val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseZ"]!!
-        val currentParam = selectedChannel.getParameter("LFOphaseZ")
-        val actualValue = InputParameterDefinitions.applyFormula(definition, currentParam.normalizedValue)
+        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseZ.normalizedValue)
         // Convert 0-360 to -180 to 180
         LFOphaseZValue = ((actualValue + 540f) % 360f) - 180f
     }
@@ -2855,12 +2836,12 @@ private fun RenderLFOSection(
     
     // Gyrophone (at the end as per CSV)
     val LFOgyrophone = selectedChannel.getParameter("LFOgyrophone")
-    var LFOgyrophoneIndex by remember { 
-        mutableIntStateOf((LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2)) 
+    var LFOgyrophoneIndex by remember {
+        mutableIntStateOf((LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2))
     }
-    
-    LaunchedEffect(inputId) {
-        LFOgyrophoneIndex = (selectedChannel.getParameter("LFOgyrophone").normalizedValue.toInt() + 1).coerceIn(0, 2)
+
+    LaunchedEffect(inputId, LFOgyrophone.normalizedValue) {
+        LFOgyrophoneIndex = (LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2)
     }
     
     ParameterDropdown(

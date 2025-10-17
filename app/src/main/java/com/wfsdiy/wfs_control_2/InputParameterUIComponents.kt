@@ -42,7 +42,7 @@ fun ParameterDropdown(
     modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    
+
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -50,16 +50,16 @@ fun ParameterDropdown(
             color = if (enabled) Color.White else Color.Gray,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        
+
         ExposedDropdownMenuBox(
             expanded = expanded,
-            onExpandedChange = { if (enabled) expanded = !expanded }
+            onExpandedChange = { expanded = !expanded } // Always allow expansion
         ) {
             OutlinedTextField(
                 value = options.getOrNull(selectedIndex) ?: "",
                 onValueChange = {},
                 readOnly = true,
-                enabled = enabled,
+                enabled = true, // Always enabled for interaction
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedTextColor = if (enabled) Color.White else Color.Gray,
                     unfocusedTextColor = if (enabled) Color.White else Color.Gray,
@@ -69,7 +69,7 @@ fun ParameterDropdown(
                     disabledBorderColor = Color.Gray
                 ),
                 modifier = Modifier
-                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = enabled)
+                    .menuAnchor(MenuAnchorType.PrimaryNotEditable, enabled = true) // Always allow menu anchor
                     .fillMaxWidth()
                     .height(48.dp),
                 textStyle = TextStyle(fontSize = 14.sp)
