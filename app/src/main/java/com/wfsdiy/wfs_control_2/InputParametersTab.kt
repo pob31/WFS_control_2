@@ -519,11 +519,11 @@ private fun RenderInputSection(
     // Cluster
     val cluster = selectedChannel.getParameter("cluster")
     var clusterIndex by remember {
-        mutableIntStateOf(cluster.normalizedValue.toInt().coerceIn(0, 10))
+        mutableIntStateOf(cluster.normalizedValue.roundToInt().coerceIn(0, 10))
     }
 
     LaunchedEffect(inputId, cluster.normalizedValue) {
-        clusterIndex = cluster.normalizedValue.toInt().coerceIn(0, 10)
+        clusterIndex = cluster.normalizedValue.roundToInt().coerceIn(0, 10)
     }
     
     ParameterDropdown(
@@ -1250,11 +1250,11 @@ private fun RenderLiveSourceSection(
     // Shape
     val liveSourceShape = selectedChannel.getParameter("liveSourceShape")
     var liveSourceShapeIndex by remember {
-        mutableIntStateOf(liveSourceShape.normalizedValue.toInt().coerceIn(0, 3))
+        mutableIntStateOf(liveSourceShape.normalizedValue.roundToInt().coerceIn(0, 3))
     }
 
     LaunchedEffect(inputId, liveSourceShape.normalizedValue) {
-        liveSourceShapeIndex = liveSourceShape.normalizedValue.toInt().coerceIn(0, 3)
+        liveSourceShapeIndex = liveSourceShape.normalizedValue.roundToInt().coerceIn(0, 3)
     }
     
     ParameterDropdown(
@@ -2258,11 +2258,11 @@ private fun RenderLFOSection(
     // Shape X
     val LFOshapeX = selectedChannel.getParameter("LFOshapeX")
     var LFOshapeXIndex by remember {
-        mutableIntStateOf(LFOshapeX.normalizedValue.toInt().coerceIn(0, 8))
+        mutableIntStateOf(LFOshapeX.normalizedValue.roundToInt().coerceIn(0, 8))
     }
 
     LaunchedEffect(inputId, LFOshapeX.normalizedValue) {
-        LFOshapeXIndex = LFOshapeX.normalizedValue.toInt().coerceIn(0, 8)
+        LFOshapeXIndex = LFOshapeX.normalizedValue.roundToInt().coerceIn(0, 8)
     }
     
     val isShapeXEnabled = isLFOEnabled
@@ -2289,11 +2289,11 @@ private fun RenderLFOSection(
     // Shape Y
     val LFOshapeY = selectedChannel.getParameter("LFOshapeY")
     var LFOshapeYIndex by remember {
-        mutableIntStateOf(LFOshapeY.normalizedValue.toInt().coerceIn(0, 8))
+        mutableIntStateOf(LFOshapeY.normalizedValue.roundToInt().coerceIn(0, 8))
     }
 
     LaunchedEffect(inputId, LFOshapeY.normalizedValue) {
-        LFOshapeYIndex = LFOshapeY.normalizedValue.toInt().coerceIn(0, 8)
+        LFOshapeYIndex = LFOshapeY.normalizedValue.roundToInt().coerceIn(0, 8)
     }
     
     val isShapeYEnabled = isLFOEnabled
@@ -2320,11 +2320,11 @@ private fun RenderLFOSection(
     // Shape Z
     val LFOshapeZ = selectedChannel.getParameter("LFOshapeZ")
     var LFOshapeZIndex by remember {
-        mutableIntStateOf(LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8))
+        mutableIntStateOf(LFOshapeZ.normalizedValue.roundToInt().coerceIn(0, 8))
     }
 
     LaunchedEffect(inputId, LFOshapeZ.normalizedValue) {
-        LFOshapeZIndex = LFOshapeZ.normalizedValue.toInt().coerceIn(0, 8)
+        LFOshapeZIndex = LFOshapeZ.normalizedValue.roundToInt().coerceIn(0, 8)
     }
     
     val isShapeZEnabled = isLFOEnabled
@@ -2837,11 +2837,11 @@ private fun RenderLFOSection(
     // Gyrophone (at the end as per CSV)
     val LFOgyrophone = selectedChannel.getParameter("LFOgyrophone")
     var LFOgyrophoneIndex by remember {
-        mutableIntStateOf((LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2))
+        mutableIntStateOf((LFOgyrophone.normalizedValue.roundToInt() + 1).coerceIn(0, 2))
     }
 
     LaunchedEffect(inputId, LFOgyrophone.normalizedValue) {
-        LFOgyrophoneIndex = (LFOgyrophone.normalizedValue.toInt() + 1).coerceIn(0, 2)
+        LFOgyrophoneIndex = (LFOgyrophone.normalizedValue.roundToInt() + 1).coerceIn(0, 2)
     }
     
     ParameterDropdown(

@@ -175,7 +175,7 @@ object InputParameterDefinitions {
             isOutgoing = true,
             uiType = UIComponentType.NUMBER_BOX,
             dataType = ParameterType.FLOAT,
-            minValue = 0f,
+            minValue = -50f,
             maxValue = 50f,
             unit = "m",
             note = "incremented or decremented by horizontal axis of JoystickXY"
@@ -189,7 +189,7 @@ object InputParameterDefinitions {
             isOutgoing = true,
             uiType = UIComponentType.NUMBER_BOX,
             dataType = ParameterType.FLOAT,
-            minValue = 0f,
+            minValue = -50f,
             maxValue = 50f,
             unit = "m",
             note = "incremented or decremented by vertical axis of JoystickXY"
@@ -203,7 +203,7 @@ object InputParameterDefinitions {
             isOutgoing = true,
             uiType = UIComponentType.NUMBER_BOX,
             dataType = ParameterType.FLOAT,
-            minValue = 0f,
+            minValue = -50f,
             maxValue = 50f,
             unit = "m",
             note = "incremented or decremented by V slider with return to zero"
