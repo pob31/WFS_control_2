@@ -290,17 +290,19 @@ class OscService : Service() {
                 // Invert for ON/OFF switches: OSC 1 (ON) -> UI index 0, OSC 0 (OFF) -> UI index 1
                 val uiValue = if (isOnOffSwitch) 1 - intValue else intValue
 
-                // For dropdowns and text buttons, don't normalize - store the integer directly
-                val isDropdownOrTextButton = definition.uiType == UIComponentType.DROPDOWN ||
-                                            definition.uiType == UIComponentType.TEXT_BUTTON
+                // For dropdowns, text buttons, and direction dials (phase controls), don't normalize - store the integer directly
+                val shouldNotNormalize = definition.uiType == UIComponentType.DROPDOWN ||
+                                        definition.uiType == UIComponentType.TEXT_BUTTON ||
+                                        definition.uiType == UIComponentType.DIRECTION_DIAL ||
+                                        (definition.formula == "x*360" && definition.dataType == ParameterType.INT)
 
-                val normalized = if (isDropdownOrTextButton) {
+                val normalized = if (shouldNotNormalize) {
                     uiValue.toFloat()
                 } else {
                     InputParameterDefinitions.reverseFormula(definition, uiValue.toFloat())
                 }
 
-                val actualValue = if (isDropdownOrTextButton) {
+                val actualValue = if (shouldNotNormalize) {
                     uiValue.toFloat()
                 } else {
                     InputParameterDefinitions.applyFormula(definition, normalized)

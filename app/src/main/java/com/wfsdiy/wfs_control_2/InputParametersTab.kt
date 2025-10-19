@@ -2219,29 +2219,23 @@ private fun RenderLFOSection(
     var LFOphaseValue by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(inputId, LFOphase.normalizedValue) {
-        val definition = InputParameterDefinitions.parametersByVariableName["LFOphase"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphase.normalizedValue)
-        // Convert 0-360 to -180 to 180
-        LFOphaseValue = ((actualValue + 540f) % 360f) - 180f
+        // Phase values are stored directly (0-360), no formula application needed
+        LFOphaseValue = LFOphase.normalizedValue
     }
-    
+
     Column {
         Text("Phase", fontSize = 12.sp, color = if (isLFOEnabled) Color.White else Color.Gray)
-        AngleDial(
+        PhaseDial(
             value = LFOphaseValue,
             onValueChange = { newValue ->
-                // Clamp to -180 to 180 using ((x+540)%360)-180
-                val clamped = ((newValue + 540f) % 360f) - 180f
-                LFOphaseValue = clamped
-                // Convert back to 0-360 for storage
-                val storageValue = if (clamped < 0f) clamped + 360f else clamped
-                val normalized = storageValue / 360f
+                LFOphaseValue = newValue
+                val normalized = newValue / 360f
                 selectedChannel.setParameter("LFOphase", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${clamped.toInt()}°"
+                    displayValue = "${newValue.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphase", inputId, storageValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphase", inputId, newValue.toInt())
             },
             dialColor = if (isLFOEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isLFOEnabled) Color.White else Color.Gray,
@@ -2710,31 +2704,25 @@ private fun RenderLFOSection(
     var LFOphaseXValue by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(inputId, LFOphaseX.normalizedValue) {
-        val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseX"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseX.normalizedValue)
-        // Convert 0-360 to -180 to 180
-        LFOphaseXValue = ((actualValue + 540f) % 360f) - 180f
+        // Phase values are stored directly (0-360), no formula application needed
+        LFOphaseXValue = LFOphaseX.normalizedValue
     }
-    
+
     val isPhaseXEnabled = isLFOEnabled && LFOshapeXIndex != 0
-    
+
     Column {
         Text("Phase X", fontSize = 12.sp, color = if (isPhaseXEnabled) Color.White else Color.Gray)
-        AngleDial(
+        PhaseDial(
             value = LFOphaseXValue,
             onValueChange = { newValue ->
-                // Clamp to -180 to 180 using ((x+540)%360)-180
-                val clamped = ((newValue + 540f) % 360f) - 180f
-                LFOphaseXValue = clamped
-                // Convert back to 0-360 for storage
-                val storageValue = if (clamped < 0f) clamped + 360f else clamped
-                val normalized = storageValue / 360f
+                LFOphaseXValue = newValue
+                val normalized = newValue / 360f
                 selectedChannel.setParameter("LFOphaseX", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${clamped.toInt()}°"
+                    displayValue = "${newValue.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseX", inputId, storageValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseX", inputId, newValue.toInt())
             },
             dialColor = if (isPhaseXEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseXEnabled) Color.White else Color.Gray,
@@ -2753,31 +2741,25 @@ private fun RenderLFOSection(
     var LFOphaseYValue by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(inputId, LFOphaseY.normalizedValue) {
-        val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseY"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseY.normalizedValue)
-        // Convert 0-360 to -180 to 180
-        LFOphaseYValue = ((actualValue + 540f) % 360f) - 180f
+        // Phase values are stored directly (0-360), no formula application needed
+        LFOphaseYValue = LFOphaseY.normalizedValue
     }
-    
+
     val isPhaseYEnabled = isLFOEnabled && LFOshapeYIndex != 0
-    
+
     Column {
         Text("Phase Y", fontSize = 12.sp, color = if (isPhaseYEnabled) Color.White else Color.Gray)
-        AngleDial(
+        PhaseDial(
             value = LFOphaseYValue,
             onValueChange = { newValue ->
-                // Clamp to -180 to 180 using ((x+540)%360)-180
-                val clamped = ((newValue + 540f) % 360f) - 180f
-                LFOphaseYValue = clamped
-                // Convert back to 0-360 for storage
-                val storageValue = if (clamped < 0f) clamped + 360f else clamped
-                val normalized = storageValue / 360f
+                LFOphaseYValue = newValue
+                val normalized = newValue / 360f
                 selectedChannel.setParameter("LFOphaseY", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${clamped.toInt()}°"
+                    displayValue = "${newValue.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseY", inputId, storageValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseY", inputId, newValue.toInt())
             },
             dialColor = if (isPhaseYEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseYEnabled) Color.White else Color.Gray,
@@ -2796,31 +2778,25 @@ private fun RenderLFOSection(
     var LFOphaseZValue by remember { mutableFloatStateOf(0f) }
 
     LaunchedEffect(inputId, LFOphaseZ.normalizedValue) {
-        val definition = InputParameterDefinitions.parametersByVariableName["LFOphaseZ"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, LFOphaseZ.normalizedValue)
-        // Convert 0-360 to -180 to 180
-        LFOphaseZValue = ((actualValue + 540f) % 360f) - 180f
+        // Phase values are stored directly (0-360), no formula application needed
+        LFOphaseZValue = LFOphaseZ.normalizedValue
     }
-    
+
     val isPhaseZEnabled = isLFOEnabled && LFOshapeZIndex != 0
-    
+
     Column {
         Text("Phase Z", fontSize = 12.sp, color = if (isPhaseZEnabled) Color.White else Color.Gray)
-        AngleDial(
+        PhaseDial(
             value = LFOphaseZValue,
             onValueChange = { newValue ->
-                // Clamp to -180 to 180 using ((x+540)%360)-180
-                val clamped = ((newValue + 540f) % 360f) - 180f
-                LFOphaseZValue = clamped
-                // Convert back to 0-360 for storage
-                val storageValue = if (clamped < 0f) clamped + 360f else clamped
-                val normalized = storageValue / 360f
+                LFOphaseZValue = newValue
+                val normalized = newValue / 360f
                 selectedChannel.setParameter("LFOphaseZ", InputParameterValue(
                     normalizedValue = normalized,
                     stringValue = "",
-                    displayValue = "${clamped.toInt()}°"
+                    displayValue = "${newValue.toInt()}°"
                 ))
-                viewModel.sendInputParameterInt("/remoteInput/LFOphaseZ", inputId, storageValue.toInt())
+                viewModel.sendInputParameterInt("/remoteInput/LFOphaseZ", inputId, newValue.toInt())
             },
             dialColor = if (isPhaseZEnabled) Color.DarkGray else Color(0xFF2A2A2A),
             indicatorColor = if (isPhaseZEnabled) Color.White else Color.Gray,

@@ -679,7 +679,7 @@ object InputParameterDefinitions {
             oscPath = "/remoteInput/LFOphase",
             isIncoming = true,
             isOutgoing = true,
-            uiType = UIComponentType.H_BIDIRECTIONAL_SLIDER,
+            uiType = UIComponentType.DIRECTION_DIAL,
             dataType = ParameterType.INT,
             minValue = 0f,
             maxValue = 360f,

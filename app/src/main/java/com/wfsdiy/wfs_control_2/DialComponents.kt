@@ -553,16 +553,10 @@ fun AngleDial(
     val dialSize = responsiveSizes.dialSize
     val strokeWidth = responsiveSizes.strokeWidth
 
-    // Convert value (-180° to +180°) to angle (0° to 360°)
-    // 0° is at bottom, 180° at top
-    // Positive values go anticlockwise, negative values go clockwise
-    val currentAngle = if (value >= 0f) {
-        // Positive values: 0° to 180° anticlockwise (90° to 270° in Compose)
-        90f + value
-    } else {
-        // Negative values: 0° to -180° clockwise (90° to -90° in Compose)
-        90f + value
-    }
+    // Convert value (-180° to +180°) to Compose angle
+    // 0° is at bottom (90° in Compose)
+    // Positive values go counter-clockwise (right side), negative go clockwise (left side)
+    val currentAngle = 90f - value
 
     Box(
         modifier = modifier.size(dialSize),
@@ -583,17 +577,17 @@ fun AngleDial(
                                 // Calculate angle from center to touch position
                                 val dx = touchPosition.x - center.x
                                 val dy = touchPosition.y - center.y
-                                val touchAngle = normalizeAngle(atan2(dy, dx).toDegrees())
-                                
-                                // Convert Compose angle to dial value
-                                // Compose: 0° = right, 90° = bottom, 180° = left, 270° = top
-                                // Dial: 0° = bottom, 90° = left, 180° = top, 270° = right
-                                // Convert touch angle to dial coordinate system
-                                val dialAngle = normalizeAngle(touchAngle + 90f)
-                                
-                                // Convert to value (-180° to +180°)
-                                val newValue = dialAngle - 180f
-                                
+                                val touchAngle = atan2(dy, dx).toDegrees()
+
+                                // Convert touch angle to dial value
+                                // touchAngle: 0° = right, 90° = bottom, 180° = left, -90° = top
+                                // Dial value: 0° = bottom, +90° = right, -90° = left, ±180° = top
+                                var newValue = 90f - touchAngle
+
+                                // Normalize to -180° to +180° range
+                                while (newValue > 180f) newValue -= 360f
+                                while (newValue < -180f) newValue += 360f
+
                                 onValueChange(newValue.coerceIn(-180f, 180f))
                             }
                         )
@@ -723,6 +717,203 @@ fun AngleDial(
             } else {
                 Text(
                     text = "${String.format(Locale.US, "%.1f", value)}°",
+                    color = valueTextColor,
+                    fontSize = (dialSize.value * 0.12f).sp,
+                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                )
+            }
+        }
+    }
+}
+
+/**
+ * Phase dial for LFO phase controls (0-359° clockwise from top)
+ *
+ * @param value Phase value in degrees (0-359°)
+ * @param onValueChange Callback when value changes
+ * @param modifier Modifier for the dial
+ * @param dialColor Color of the dial background
+ * @param indicatorColor Color of the value indicator
+ * @param trackColor Color of the track/arc
+ * @param displayedValue The value to display (independent from dial value)
+ * @param isValueEditable Whether the displayed value can be edited
+ * @param onDisplayedValueChange Callback when displayed value changes
+ * @param valueTextColor Color of the value text
+ * @param enabled Whether the dial is interactive
+ */
+@Composable
+fun PhaseDial(
+    value: Float, // 0° to 359°
+    onValueChange: (Float) -> Unit,
+    modifier: Modifier = Modifier,
+    dialColor: Color = Color.DarkGray,
+    indicatorColor: Color = Color.White,
+    trackColor: Color = Color.Blue,
+    displayedValue: String = String.format(Locale.US, "%.0f", value),
+    isValueEditable: Boolean = true,
+    onDisplayedValueChange: (String) -> Unit = {},
+    valueTextColor: Color = Color.White,
+    enabled: Boolean = true
+) {
+    val responsiveSizes = getResponsiveDialSizes()
+    val dialSize = responsiveSizes.dialSize
+    val strokeWidth = responsiveSizes.strokeWidth
+
+    // Normalize value to 0-359 range
+    val normalizedValue = ((value % 360f) + 360f) % 360f
+
+    // Convert value (0° to 359°) to Compose angle
+    // Value 0° = top = 270° in Compose (-90°)
+    // Goes clockwise: 90° value = 0° Compose (right), 180° value = 90° Compose (bottom), etc.
+    val currentAngle = normalizedValue - 90f
+
+    Box(
+        modifier = modifier.size(dialSize),
+        contentAlignment = Alignment.Center
+    ) {
+        Canvas(
+            modifier = Modifier
+                .fillMaxSize()
+                .pointerInput(enabled) {
+                    if (enabled) {
+                        detectDragGestures(
+                            onDragStart = { },
+                            onDragEnd = { },
+                            onDrag = { change, _ ->
+                                val center = Offset(size.width / 2f, size.height / 2f)
+                                val touchPosition = change.position
+
+                                // Calculate angle from center to touch position
+                                val dx = touchPosition.x - center.x
+                                val dy = touchPosition.y - center.y
+                                val touchAngle = atan2(dy, dx).toDegrees()
+
+                                // Convert Compose angle to phase value
+                                // Compose: 0° = right, 90° = bottom, 180° = left, 270° = top
+                                // Phase: 0° = top, 90° = right, 180° = bottom, 270° = left
+                                val phaseValue = touchAngle + 90f
+
+                                // Normalize to 0-359
+                                val normalized = ((phaseValue % 360f) + 360f) % 360f
+
+                                onValueChange(normalized)
+                            }
+                        )
+                    }
+                }
+        ) {
+            val center = Offset(size.width / 2f, size.height / 2f)
+            val radius = min(size.width, size.height) / 2f - strokeWidth.value / 2f
+
+            // Draw dial background circle
+            drawCircle(
+                color = dialColor,
+                radius = radius,
+                style = Stroke(width = strokeWidth.value)
+            )
+
+            // Draw full 360° track (single color, no active/inactive)
+            drawArc(
+                color = trackColor,
+                startAngle = 0f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
+            )
+
+            // Draw value indicator as a large dot on the track
+            val indicatorAngle = currentAngle.toRadians()
+            val indicatorRadius = radius - strokeWidth.value
+            val indicatorX = center.x + cos(indicatorAngle) * indicatorRadius
+            val indicatorY = center.y + sin(indicatorAngle) * indicatorRadius
+
+            drawCircle(
+                color = indicatorColor,
+                radius = strokeWidth.value * 1.5f,
+                center = Offset(indicatorX, indicatorY)
+            )
+        }
+
+        // Show value text at center
+        Box(
+            modifier = Modifier.align(Alignment.Center),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isValueEditable) {
+                var textFieldValue by remember { mutableStateOf(TextFieldValue(String.format(Locale.US, "%.0f", normalizedValue))) }
+                val focusManager = LocalFocusManager.current
+
+                // Update text when value changes
+                LaunchedEffect(normalizedValue) {
+                    textFieldValue = TextFieldValue(String.format(Locale.US, "%.0f", normalizedValue))
+                }
+
+                BasicTextField(
+                    value = textFieldValue,
+                    onValueChange = { newValue ->
+                        textFieldValue = newValue
+                    },
+                    textStyle = TextStyle(
+                        color = valueTextColor,
+                        fontSize = (dialSize.value * 0.12f).sp,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    ),
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(
+                        keyboardType = KeyboardType.Number,
+                        imeAction = ImeAction.Done
+                    ),
+                    keyboardActions = KeyboardActions(
+                        onDone = {
+                            // Normalize value to 0-359 when Done is pressed
+                            try {
+                                val parsedValue = textFieldValue.text.toFloatOrNull()
+                                if (parsedValue != null) {
+                                    val normalized = ((parsedValue % 360f) + 360f) % 360f
+                                    onValueChange(normalized)
+                                }
+                            } catch (e: NumberFormatException) {
+                                // Ignore invalid input
+                            }
+                            // Close the keyboard
+                            focusManager.clearFocus()
+                        }
+                    ),
+                    modifier = Modifier
+                        .size(width = dialSize * 0.6f, height = dialSize * 0.15f)
+                        .onFocusChanged { focusState ->
+                            if (focusState.isFocused) {
+                                // Select all text when focused
+                                val text = textFieldValue.text
+                                textFieldValue = TextFieldValue(
+                                    text = text,
+                                    selection = androidx.compose.ui.text.TextRange(0, text.length)
+                                )
+                            } else {
+                                // Normalize value to 0-359 when focus is lost
+                                try {
+                                    val parsedValue = textFieldValue.text.toFloatOrNull()
+                                    if (parsedValue != null) {
+                                        val normalized = ((parsedValue % 360f) + 360f) % 360f
+                                        onValueChange(normalized)
+                                    }
+                                } catch (e: NumberFormatException) {
+                                    // Ignore invalid input
+                                }
+                            }
+                        }
+                )
+
+                // Show unit below the editable value
+                Text(
+                    text = "°",
+                    color = valueTextColor,
+                    fontSize = (dialSize.value * 0.08f).sp,
+                    modifier = Modifier.offset(y = dialSize * 0.1f)
+                )
+            } else {
+                Text(
+                    text = "${String.format(Locale.US, "%.0f", normalizedValue)}°",
                     color = valueTextColor,
                     fontSize = (dialSize.value * 0.12f).sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
