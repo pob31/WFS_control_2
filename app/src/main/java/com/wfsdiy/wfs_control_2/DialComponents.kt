@@ -120,11 +120,12 @@ fun BasicDial(
     onDisplayedValueChange: (String) -> Unit = {},
     onValueCommit: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    sizeMultiplier: Float = 1.0f
 ) {
     val responsiveSizes = getResponsiveDialSizes()
-    val dialSize = responsiveSizes.dialSize
-    val strokeWidth = responsiveSizes.strokeWidth
+    val dialSize = responsiveSizes.dialSize * sizeMultiplier
+    val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
     
     // Convert value (0.0 to 1.0) to angle with dead zone at bottom
     val deadZoneAngle = 60f // Dead zone at bottom center
@@ -547,11 +548,12 @@ fun AngleDial(
     isValueEditable: Boolean = true,
     onDisplayedValueChange: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    sizeMultiplier: Float = 1.0f
 ) {
     val responsiveSizes = getResponsiveDialSizes()
-    val dialSize = responsiveSizes.dialSize
-    val strokeWidth = responsiveSizes.strokeWidth
+    val dialSize = responsiveSizes.dialSize * sizeMultiplier
+    val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
 
     // Convert value (-180° to +180°) to Compose angle
     // 0° is at bottom (90° in Compose)
@@ -753,11 +755,12 @@ fun PhaseDial(
     isValueEditable: Boolean = true,
     onDisplayedValueChange: (String) -> Unit = {},
     valueTextColor: Color = Color.White,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    sizeMultiplier: Float = 1.0f
 ) {
     val responsiveSizes = getResponsiveDialSizes()
-    val dialSize = responsiveSizes.dialSize
-    val strokeWidth = responsiveSizes.strokeWidth
+    val dialSize = responsiveSizes.dialSize * sizeMultiplier
+    val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
 
     // Normalize value to 0-359 range
     val normalizedValue = ((value % 360f) + 360f) % 360f
