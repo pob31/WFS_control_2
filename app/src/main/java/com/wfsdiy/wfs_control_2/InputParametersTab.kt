@@ -596,26 +596,7 @@ private fun RenderInputSection(
     LaunchedEffect(inputId, maxSpeedActive.normalizedValue) {
         maxSpeedActiveIndex = maxSpeedActive.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
-    ParameterTextButton(
-        label = "Max Speed Active",
-        selectedIndex = maxSpeedActiveIndex,
-        options = listOf("ON", "OFF"),
-        onSelectionChange = { index ->
-            maxSpeedActiveIndex = index
-            selectedChannel.setParameter("maxSpeedActive", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("ON", "OFF")[index]
-            ))
-            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
-            viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, 1 - index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Max Speed
     val maxSpeed = selectedChannel.getParameter("maxSpeed")
     val isMaxSpeedEnabled = maxSpeedActiveIndex == 0 // 0 = ON, 1 = OFF
@@ -624,70 +605,11 @@ private fun RenderInputSection(
         mutableStateOf(maxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" })
     }
 
-    // Reset state when input channel changes
     LaunchedEffect(inputId, maxSpeed.normalizedValue) {
         maxSpeedValue = maxSpeed.normalizedValue
         maxSpeedDisplayValue = maxSpeed.displayValue.replace("m/s", "").trim().ifEmpty { "0.01" }
     }
-    
-    Column {
-        Text(
-            "Max Speed", 
-            fontSize = 12.sp, 
-            color = if (isMaxSpeedEnabled) Color.White else Color.Gray
-        )
-        BasicDial(
-            value = maxSpeedValue,
-            onValueChange = { newValue ->
-                maxSpeedValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["maxSpeed"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                maxSpeedDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                
-                // Update the state in the channel
-                val updatedValue = InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m/s"
-                )
-                selectedChannel.setParameter("maxSpeed", updatedValue)
-                
-                viewModel.sendInputParameterFloat("/remoteInput/maxSpeed", inputId, actualValue)
-            },
-            dialColor = if (isMaxSpeedEnabled) Color.DarkGray else Color(0xFF2A2A2A),
-            indicatorColor = if (isMaxSpeedEnabled) Color.White else Color.Gray,
-            trackColor = if (isMaxSpeedEnabled) Color(0xFF00BCD4) else Color.DarkGray,
-            displayedValue = maxSpeedDisplayValue,
-            valueUnit = "m/s",
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Not needed - typing is handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val definition = InputParameterDefinitions.parametersByVariableName["maxSpeed"]!!
-                    val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                    maxSpeedValue = normalized
-                    maxSpeedDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    
-                    // Update the state in the channel
-                    val updatedValue = InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m/s"
-                    )
-                    selectedChannel.setParameter("maxSpeed", updatedValue)
-                    
-                    viewModel.sendInputParameterFloat("/remoteInput/maxSpeed", inputId, coercedValue)
-                }
-                // Note: Invalid input is automatically reverted by BasicDial's LaunchedEffect
-            },
-            valueTextColor = if (isMaxSpeedEnabled) Color.White else Color.Gray,
-            enabled = true // Always enabled, just greyed out visually
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Height Factor
     val heightFactor = selectedChannel.getParameter("heightFactor")
     var heightFactorValue by remember { mutableStateOf(heightFactor.normalizedValue) }
@@ -701,53 +623,7 @@ private fun RenderInputSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, heightFactor.normalizedValue)
         heightFactorDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("Height Factor", fontSize = 12.sp, color = Color.White)
-        BasicDial(
-            value = heightFactorValue,
-            onValueChange = { newValue ->
-                heightFactorValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["heightFactor"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                heightFactorDisplayValue = actualValue.toInt().toString()
-                selectedChannel.setParameter("heightFactor", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}%"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/heightFactor", inputId, actualValue.toInt())
-            },
-            dialColor = Color.DarkGray,
-            indicatorColor = Color.White,
-            trackColor = Color(0xFFE91E63),
-            displayedValue = heightFactorDisplayValue,
-            valueUnit = "%",
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt()
-                    val coercedValue = roundedValue.coerceIn(0, 100)
-                    val normalized = coercedValue / 100f
-                    heightFactorValue = normalized
-                    heightFactorDisplayValue = coercedValue.toString()
-                    selectedChannel.setParameter("heightFactor", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${coercedValue}%"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/heightFactor", inputId, coercedValue)
-                }
-            },
-            valueTextColor = Color.White,
-            enabled = true
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Attenuation Law
     val attenuationLaw = selectedChannel.getParameter("attenuationLaw")
     var attenuationLawIndex by remember {
@@ -757,147 +633,35 @@ private fun RenderInputSection(
     LaunchedEffect(inputId, attenuationLaw.normalizedValue) {
         attenuationLawIndex = attenuationLaw.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
-    ParameterTextButton(
-        label = "Attenuation Law",
-        selectedIndex = attenuationLawIndex,
-        options = listOf("Log", "1/d²"),
-        onSelectionChange = { index ->
-            attenuationLawIndex = index
-            selectedChannel.setParameter("attenuationLaw", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("Log", "1/d²")[index]
-            ))
-            viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
-    // Distance Attenuation (visible if attenuationLawIndex == 0)
-    if (attenuationLawIndex == 0) {
-        val distanceAttenuation = selectedChannel.getParameter("distanceAttenuation")
-        var distanceAttenuationValue by remember { mutableStateOf(distanceAttenuation.normalizedValue) }
-        var distanceAttenuationDisplayValue by remember {
-            mutableStateOf(distanceAttenuation.displayValue.replace("dB/m", "").trim().ifEmpty { "-6.00" })
-        }
 
-        LaunchedEffect(inputId, distanceAttenuation.normalizedValue) {
-            distanceAttenuationValue = distanceAttenuation.normalizedValue
-            val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
-            val actualValue = InputParameterDefinitions.applyFormula(definition, distanceAttenuation.normalizedValue)
-            distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-        }
-        
-        Column {
-            Text("Distance Attenuation", fontSize = 12.sp, color = Color.White)
-            BasicDial(
-                value = distanceAttenuationValue,
-                onValueChange = { newValue ->
-                    distanceAttenuationValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB/m"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, actualValue)
-                },
-                dialColor = Color.DarkGray,
-                indicatorColor = Color.White,
-                trackColor = Color(0xFFFFC107),
-                displayedValue = distanceAttenuationDisplayValue,
-                valueUnit = "dB/m",
-                isValueEditable = true,
-                onDisplayedValueChange = {},
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val coercedValue = value.coerceIn(-6f, 0f)
-                        val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        distanceAttenuationValue = normalized
-                        distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB/m"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, coercedValue)
-                    }
-                },
-                valueTextColor = Color.White,
-                enabled = true
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(spacing.smallSpacing))
+    // Distance Attenuation
+    val distanceAttenuation = selectedChannel.getParameter("distanceAttenuation")
+    var distanceAttenuationValue by remember { mutableStateOf(distanceAttenuation.normalizedValue) }
+    var distanceAttenuationDisplayValue by remember {
+        mutableStateOf(distanceAttenuation.displayValue.replace("dB/m", "").trim().ifEmpty { "-6.00" })
     }
-    
-    // Distance Ratio (visible if attenuationLawIndex == 1)
-    if (attenuationLawIndex == 1) {
-        val distanceRatio = selectedChannel.getParameter("distanceRatio")
-        var distanceRatioValue by remember { mutableStateOf(distanceRatio.normalizedValue) }
-        var distanceRatioDisplayValue by remember {
-            mutableStateOf(distanceRatio.displayValue.replace("x", "").trim().ifEmpty { "0.1" })
-        }
 
-        LaunchedEffect(inputId, distanceRatio.normalizedValue) {
-            distanceRatioValue = distanceRatio.normalizedValue
-            val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
-            val actualValue = InputParameterDefinitions.applyFormula(definition, distanceRatio.normalizedValue)
-            distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-        }
-        
-        Column {
-            Text("Distance Ratio", fontSize = 12.sp, color = Color.White)
-            BasicDial(
-                value = distanceRatioValue,
-                onValueChange = { newValue ->
-                    distanceRatioValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("distanceRatio", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, actualValue)
-                },
-                dialColor = Color.DarkGray,
-                indicatorColor = Color.White,
-                trackColor = Color(0xFFFFC107),
-                displayedValue = distanceRatioDisplayValue,
-                valueUnit = "x",
-                isValueEditable = true,
-                onDisplayedValueChange = {},
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val coercedValue = value.coerceIn(0.1f, 10f)
-                        val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        distanceRatioValue = normalized
-                        distanceRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("distanceRatio", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, coercedValue)
-                    }
-                },
-                valueTextColor = Color.White,
-                enabled = true
-            )
-        }
-        
-        Spacer(modifier = Modifier.height(spacing.smallSpacing))
+    LaunchedEffect(inputId, distanceAttenuation.normalizedValue) {
+        distanceAttenuationValue = distanceAttenuation.normalizedValue
+        val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
+        val actualValue = InputParameterDefinitions.applyFormula(definition, distanceAttenuation.normalizedValue)
+        distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
+
+    // Distance Ratio
+    val distanceRatio = selectedChannel.getParameter("distanceRatio")
+    var distanceRatioValue by remember { mutableStateOf(distanceRatio.normalizedValue) }
+    var distanceRatioDisplayValue by remember {
+        mutableStateOf(distanceRatio.displayValue.replace("x", "").trim().ifEmpty { "0.1" })
+    }
+
+    LaunchedEffect(inputId, distanceRatio.normalizedValue) {
+        distanceRatioValue = distanceRatio.normalizedValue
+        val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
+        val actualValue = InputParameterDefinitions.applyFormula(definition, distanceRatio.normalizedValue)
+        distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+    }
+
     // Common Attenuation
     val commonAtten = selectedChannel.getParameter("commonAtten")
     var commonAttenValue by remember { mutableStateOf(commonAtten.normalizedValue) }
@@ -911,49 +675,294 @@ private fun RenderInputSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, commonAtten.normalizedValue)
         commonAttenDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("Common Attenuation", fontSize = 12.sp, color = Color.White)
-        BasicDial(
-            value = commonAttenValue,
-            onValueChange = { newValue ->
-                commonAttenValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["commonAtten"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                commonAttenDisplayValue = actualValue.toInt().toString()
-                selectedChannel.setParameter("commonAtten", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}%"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/commonAtten", inputId, actualValue.toInt())
-            },
-            dialColor = Color.DarkGray,
-            indicatorColor = Color.White,
-            trackColor = Color(0xFF3F51B5),
-            displayedValue = commonAttenDisplayValue,
-            valueUnit = "%",
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt()
-                    val coercedValue = roundedValue.coerceIn(0, 100)
-                    val normalized = coercedValue / 100f
-                    commonAttenValue = normalized
-                    commonAttenDisplayValue = coercedValue.toString()
-                    selectedChannel.setParameter("commonAtten", InputParameterValue(
-                        normalizedValue = normalized,
+
+    // Third Row with 10% padding: Max Speed | Height Factor | Attenuation Law/Distance | Common Attenuation
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f),
+        horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+    ) {
+        // Cell 1: Max Speed Active button above Max Speed dial
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ParameterTextButton(
+                label = "Max Speed Active",
+                selectedIndex = maxSpeedActiveIndex,
+                options = listOf("ON", "OFF"),
+                onSelectionChange = { index ->
+                    maxSpeedActiveIndex = index
+                    selectedChannel.setParameter("maxSpeedActive", InputParameterValue(
+                        normalizedValue = index.toFloat(),
                         stringValue = "",
-                        displayValue = "${coercedValue}%"
+                        displayValue = listOf("ON", "OFF")[index]
                     ))
-                    viewModel.sendInputParameterInt("/remoteInput/commonAtten", inputId, coercedValue)
-                }
-            },
-            valueTextColor = Color.White,
-            enabled = true
-        )
+                    viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, 1 - index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(spacing.smallSpacing))
+            Text(
+                "Max Speed",
+                fontSize = 12.sp,
+                color = if (isMaxSpeedEnabled) Color.White else Color.Gray
+            )
+            BasicDial(
+                value = maxSpeedValue,
+                onValueChange = { newValue ->
+                    maxSpeedValue = newValue
+                    val definition = InputParameterDefinitions.parametersByVariableName["maxSpeed"]!!
+                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                    maxSpeedDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                    selectedChannel.setParameter("maxSpeed", InputParameterValue(
+                        normalizedValue = newValue,
+                        stringValue = "",
+                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m/s"
+                    ))
+                    viewModel.sendInputParameterFloat("/remoteInput/maxSpeed", inputId, actualValue)
+                },
+                dialColor = if (isMaxSpeedEnabled) Color.DarkGray else Color(0xFF2A2A2A),
+                indicatorColor = if (isMaxSpeedEnabled) Color.White else Color.Gray,
+                trackColor = if (isMaxSpeedEnabled) Color(0xFF00BCD4) else Color.DarkGray,
+                displayedValue = maxSpeedDisplayValue,
+                valueUnit = "m/s",
+                isValueEditable = true,
+                onDisplayedValueChange = {},
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val definition = InputParameterDefinitions.parametersByVariableName["maxSpeed"]!!
+                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                        maxSpeedValue = normalized
+                        maxSpeedDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                        selectedChannel.setParameter("maxSpeed", InputParameterValue(
+                            normalizedValue = normalized,
+                            stringValue = "",
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m/s"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/maxSpeed", inputId, coercedValue)
+                    }
+                },
+                valueTextColor = if (isMaxSpeedEnabled) Color.White else Color.Gray,
+                enabled = true,
+                sizeMultiplier = 0.7f
+            )
+        }
+
+        // Cell 2: Height Factor dial
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Height Factor", fontSize = 12.sp, color = Color.White)
+            BasicDial(
+                value = heightFactorValue,
+                onValueChange = { newValue ->
+                    heightFactorValue = newValue
+                    val definition = InputParameterDefinitions.parametersByVariableName["heightFactor"]!!
+                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                    heightFactorDisplayValue = actualValue.toInt().toString()
+                    selectedChannel.setParameter("heightFactor", InputParameterValue(
+                        normalizedValue = newValue,
+                        stringValue = "",
+                        displayValue = "${actualValue.toInt()}%"
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/heightFactor", inputId, actualValue.toInt())
+                },
+                dialColor = Color.DarkGray,
+                indicatorColor = Color.White,
+                trackColor = Color(0xFFE91E63),
+                displayedValue = heightFactorDisplayValue,
+                valueUnit = "%",
+                isValueEditable = true,
+                onDisplayedValueChange = {},
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val roundedValue = value.roundToInt()
+                        val coercedValue = roundedValue.coerceIn(0, 100)
+                        val normalized = coercedValue / 100f
+                        heightFactorValue = normalized
+                        heightFactorDisplayValue = coercedValue.toString()
+                        selectedChannel.setParameter("heightFactor", InputParameterValue(
+                            normalizedValue = normalized,
+                            stringValue = "",
+                            displayValue = "${coercedValue}%"
+                        ))
+                        viewModel.sendInputParameterInt("/remoteInput/heightFactor", inputId, coercedValue)
+                    }
+                },
+                valueTextColor = Color.White,
+                enabled = true,
+                sizeMultiplier = 0.7f
+            )
+        }
+
+        // Cell 3: Attenuation Law button above Distance Attenuation/Distance Ratio dial
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            ParameterTextButton(
+                label = "Attenuation Law",
+                selectedIndex = attenuationLawIndex,
+                options = listOf("Log", "1/d²"),
+                onSelectionChange = { index ->
+                    attenuationLawIndex = index
+                    selectedChannel.setParameter("attenuationLaw", InputParameterValue(
+                        normalizedValue = index.toFloat(),
+                        stringValue = "",
+                        displayValue = listOf("Log", "1/d²")[index]
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+            Spacer(modifier = Modifier.height(spacing.smallSpacing))
+
+            // Distance Attenuation (visible if attenuationLawIndex == 0)
+            if (attenuationLawIndex == 0) {
+                Text("Distance Attenuation", fontSize = 12.sp, color = Color.White)
+                BasicDial(
+                    value = distanceAttenuationValue,
+                    onValueChange = { newValue ->
+                        distanceAttenuationValue = newValue
+                        val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
+                        val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                        distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                        selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
+                            normalizedValue = newValue,
+                            stringValue = "",
+                            displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB/m"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, actualValue)
+                    },
+                    dialColor = Color.DarkGray,
+                    indicatorColor = Color.White,
+                    trackColor = Color(0xFFFFC107),
+                    displayedValue = distanceAttenuationDisplayValue,
+                    valueUnit = "dB/m",
+                    isValueEditable = true,
+                    onDisplayedValueChange = {},
+                    onValueCommit = { committedValue ->
+                        committedValue.toFloatOrNull()?.let { value ->
+                            val coercedValue = value.coerceIn(-6f, 0f)
+                            val definition = InputParameterDefinitions.parametersByVariableName["distanceAttenuation"]!!
+                            val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                            distanceAttenuationValue = normalized
+                            distanceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                            selectedChannel.setParameter("distanceAttenuation", InputParameterValue(
+                                normalizedValue = normalized,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB/m"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/distanceAttenuation", inputId, coercedValue)
+                        }
+                    },
+                    valueTextColor = Color.White,
+                    enabled = true,
+                    sizeMultiplier = 0.7f
+                )
+            }
+
+            // Distance Ratio (visible if attenuationLawIndex == 1)
+            if (attenuationLawIndex == 1) {
+                Text("Distance Ratio", fontSize = 12.sp, color = Color.White)
+                BasicDial(
+                    value = distanceRatioValue,
+                    onValueChange = { newValue ->
+                        distanceRatioValue = newValue
+                        val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
+                        val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                        distanceRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                        selectedChannel.setParameter("distanceRatio", InputParameterValue(
+                            normalizedValue = newValue,
+                            stringValue = "",
+                            displayValue = "${String.format(Locale.US, "%.2f", actualValue)}x"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, actualValue)
+                    },
+                    dialColor = Color.DarkGray,
+                    indicatorColor = Color.White,
+                    trackColor = Color(0xFFFFC107),
+                    displayedValue = distanceRatioDisplayValue,
+                    valueUnit = "x",
+                    isValueEditable = true,
+                    onDisplayedValueChange = {},
+                    onValueCommit = { committedValue ->
+                        committedValue.toFloatOrNull()?.let { value ->
+                            val coercedValue = value.coerceIn(0.1f, 10f)
+                            val definition = InputParameterDefinitions.parametersByVariableName["distanceRatio"]!!
+                            val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                            distanceRatioValue = normalized
+                            distanceRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                            selectedChannel.setParameter("distanceRatio", InputParameterValue(
+                                normalizedValue = normalized,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}x"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/distanceRatio", inputId, coercedValue)
+                        }
+                    },
+                    valueTextColor = Color.White,
+                    enabled = true,
+                    sizeMultiplier = 0.7f
+                )
+            }
+        }
+
+        // Cell 4: Common Attenuation dial
+        Column(
+            modifier = Modifier.weight(1f),
+            verticalArrangement = Arrangement.Bottom,
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text("Common Attenuation", fontSize = 12.sp, color = Color.White)
+            BasicDial(
+                value = commonAttenValue,
+                onValueChange = { newValue ->
+                    commonAttenValue = newValue
+                    val definition = InputParameterDefinitions.parametersByVariableName["commonAtten"]!!
+                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                    commonAttenDisplayValue = actualValue.toInt().toString()
+                    selectedChannel.setParameter("commonAtten", InputParameterValue(
+                        normalizedValue = newValue,
+                        stringValue = "",
+                        displayValue = "${actualValue.toInt()}%"
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/commonAtten", inputId, actualValue.toInt())
+                },
+                dialColor = Color.DarkGray,
+                indicatorColor = Color.White,
+                trackColor = Color(0xFF3F51B5),
+                displayedValue = commonAttenDisplayValue,
+                valueUnit = "%",
+                isValueEditable = true,
+                onDisplayedValueChange = {},
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val roundedValue = value.roundToInt()
+                        val coercedValue = roundedValue.coerceIn(0, 100)
+                        val normalized = coercedValue / 100f
+                        commonAttenValue = normalized
+                        commonAttenDisplayValue = coercedValue.toString()
+                        selectedChannel.setParameter("commonAtten", InputParameterValue(
+                            normalizedValue = normalized,
+                            stringValue = "",
+                            displayValue = "${coercedValue}%"
+                        ))
+                        viewModel.sendInputParameterInt("/remoteInput/commonAtten", inputId, coercedValue)
+                    }
+                },
+                valueTextColor = Color.White,
+                enabled = true,
+                sizeMultiplier = 0.7f
+            )
+        }
     }
 }
 
