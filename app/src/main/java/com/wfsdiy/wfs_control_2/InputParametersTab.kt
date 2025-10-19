@@ -144,9 +144,7 @@ fun InputParametersTab(
             spacing = spacing
         )
         
-        // Live Source Attenuation Group
-        ParameterSectionHeader(title = "Live Source Attenuation")
-        
+        // Live Source Attenuation Group (now has its own collapsible header)
         RenderLiveSourceSection(
             selectedChannel = selectedChannel,
             viewModel = viewModel,
@@ -154,12 +152,11 @@ fun InputParametersTab(
             horizontalSliderHeight = horizontalSliderHeight,
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
-            spacing = spacing
+            spacing = spacing,
+            screenWidthDp = screenWidthDp
         )
         
-        // Floor Reflections Group
-        ParameterSectionHeader(title = "Floor Reflections")
-        
+        // Floor Reflections Group (now has its own collapsible header)
         RenderFloorReflectionsSection(
             selectedChannel = selectedChannel,
             viewModel = viewModel,
@@ -167,7 +164,8 @@ fun InputParametersTab(
             horizontalSliderHeight = horizontalSliderHeight,
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
-            spacing = spacing
+            spacing = spacing,
+            screenWidthDp = screenWidthDp
         )
         
         // Jitter Group (now has its own collapsible header)
@@ -1192,10 +1190,12 @@ private fun RenderLiveSourceSection(
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
-    spacing: ResponsiveSpacing
+    spacing: ResponsiveSpacing,
+    screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    
+    var isExpanded by remember { mutableStateOf(false) }
+
     // Active
     val liveSourceActive = selectedChannel.getParameter("liveSourceActive")
     var liveSourceActiveIndex by remember {
@@ -1205,28 +1205,9 @@ private fun RenderLiveSourceSection(
     LaunchedEffect(inputId, liveSourceActive.normalizedValue) {
         liveSourceActiveIndex = liveSourceActive.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
+
     val isLiveSourceEnabled = liveSourceActiveIndex == 0 // 0 = ON, 1 = OFF
-    
-    ParameterTextButton(
-        label = "Active",
-        selectedIndex = liveSourceActiveIndex,
-        options = listOf("ON", "OFF"),
-        onSelectionChange = { index ->
-            liveSourceActiveIndex = index
-            selectedChannel.setParameter("liveSourceActive", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("ON", "OFF")[index]
-            ))
-            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
-            viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, 1 - index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Radius (greyed out when inactive) - Width Expansion Slider
     val radius = selectedChannel.getParameter("liveSourceRadius")
     var radiusValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
@@ -1239,53 +1220,7 @@ private fun RenderLiveSourceSection(
         radiusValue = actualValue / 50f
         radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Column {
-        Text("Radius", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-        WidthExpansionSlider(
-            value = radiusValue,
-            onValueChange = { newValue ->
-                radiusValue = newValue
-                // Map 0-1 expansion to 0-50 meters
-                val actualValue = newValue * 50f
-                radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                val normalized = actualValue / 50f
-                selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
-                    normalizedValue = normalized,
-                    stringValue = "",
-                    displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m"
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, actualValue)
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = if (isLiveSourceEnabled) Color(0xFF2196F3) else Color.Gray,
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            displayedValue = radiusDisplayValue,
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Typing handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(0f, 50f)
-                    val expansionValue = coercedValue / 50f
-                    radiusValue = expansionValue
-                    radiusDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
-                        normalizedValue = expansionValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, coercedValue)
-                }
-            },
-            valueUnit = "m",
-            valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-            enabled = true // Always enabled, just greyed out visually
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Shape
     val liveSourceShape = selectedChannel.getParameter("liveSourceShape")
     var liveSourceShapeIndex by remember {
@@ -1295,26 +1230,7 @@ private fun RenderLiveSourceSection(
     LaunchedEffect(inputId, liveSourceShape.normalizedValue) {
         liveSourceShapeIndex = liveSourceShape.normalizedValue.roundToInt().coerceIn(0, 3)
     }
-    
-    ParameterDropdown(
-        label = "Shape",
-        selectedIndex = liveSourceShapeIndex,
-        options = listOf("linear", "log", "square d²", "sine"),
-        onSelectionChange = { index ->
-            liveSourceShapeIndex = index
-            selectedChannel.setParameter("liveSourceShape", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("linear", "log", "square d²", "sine")[index]
-            ))
-            viewModel.sendInputParameterInt("/remoteInput/liveSourceShape", inputId, index)
-        },
-        modifier = Modifier.fillMaxWidth(),
-        enabled = isLiveSourceEnabled
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Attenuation
     val liveSourceAttenuation = selectedChannel.getParameter("liveSourceAttenuation")
     var liveSourceAttenuationValue by remember { mutableStateOf(liveSourceAttenuation.normalizedValue) }
@@ -1326,57 +1242,7 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceAttenuation.normalizedValue)
         liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Attenuation", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-            StandardSlider(
-                value = liveSourceAttenuationValue,
-                onValueChange = { newValue ->
-                    liveSourceAttenuationValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = if (isLiveSourceEnabled) Color(0xFF9C27B0) else Color.Gray,
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = liveSourceAttenuationDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        liveSourceAttenuationValue = normalized
-                        liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Peak Threshold
     val liveSourcePeakThreshold = selectedChannel.getParameter("liveSourcePeakThreshold")
     var liveSourcePeakThresholdValue by remember { mutableStateOf(liveSourcePeakThreshold.normalizedValue) }
@@ -1388,57 +1254,7 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakThreshold.normalizedValue)
         liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Peak Threshold", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-            StandardSlider(
-                value = liveSourcePeakThresholdValue,
-                onValueChange = { newValue ->
-                    liveSourcePeakThresholdValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = if (isLiveSourceEnabled) Color(0xFFFF9800) else Color.Gray,
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = liveSourcePeakThresholdDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        liveSourcePeakThresholdValue = normalized
-                        liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Peak Ratio
     val liveSourcePeakRatio = selectedChannel.getParameter("liveSourcePeakRatio")
     var liveSourcePeakRatioValue by remember { mutableStateOf(liveSourcePeakRatio.normalizedValue) }
@@ -1452,52 +1268,7 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourcePeakRatio.normalizedValue)
         liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Column {
-        Text("Peak Ratio", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-        BasicDial(
-            value = liveSourcePeakRatioValue,
-            onValueChange = { newValue ->
-                liveSourcePeakRatioValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = String.format(Locale.US, "%.2f", actualValue)
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, actualValue)
-            },
-            dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
-            indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-            trackColor = if (isLiveSourceEnabled) Color(0xFF673AB7) else Color.DarkGray,
-            displayedValue = liveSourcePeakRatioDisplayValue,
-            valueUnit = "",
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
-                    val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                    liveSourcePeakRatioValue = normalized
-                    liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, coercedValue)
-                }
-            },
-            valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-            enabled = true
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Slow Threshold
     val liveSourceSlowThreshold = selectedChannel.getParameter("liveSourceSlowThreshold")
     var liveSourceSlowThresholdValue by remember { mutableStateOf(liveSourceSlowThreshold.normalizedValue) }
@@ -1509,57 +1280,7 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowThreshold.normalizedValue)
         liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Slow Threshold", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-            StandardSlider(
-                value = liveSourceSlowThresholdValue,
-                onValueChange = { newValue ->
-                    liveSourceSlowThresholdValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = if (isLiveSourceEnabled) Color(0xFF4CAF50) else Color.Gray,
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = liveSourceSlowThresholdDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        liveSourceSlowThresholdValue = normalized
-                        liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Slow Ratio
     val liveSourceSlowRatio = selectedChannel.getParameter("liveSourceSlowRatio")
     var liveSourceSlowRatioValue by remember { mutableStateOf(liveSourceSlowRatio.normalizedValue) }
@@ -1573,48 +1294,362 @@ private fun RenderLiveSourceSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, liveSourceSlowRatio.normalizedValue)
         liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Column {
-        Text("Slow Ratio", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
-        BasicDial(
-            value = liveSourceSlowRatioValue,
-            onValueChange = { newValue ->
-                liveSourceSlowRatioValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = String.format(Locale.US, "%.2f", actualValue)
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, actualValue)
-            },
-            dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
-            indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-            trackColor = if (isLiveSourceEnabled) Color(0xFFE91E63) else Color.DarkGray,
-            displayedValue = liveSourceSlowRatioDisplayValue,
-            valueUnit = "",
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
-                    val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                    liveSourceSlowRatioValue = normalized
-                    liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, coercedValue)
-                }
-            },
-            valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-            enabled = true
+
+    // Collapsible Header
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded }
+            .padding(
+                start = screenWidthDp * 0.1f,
+                end = screenWidthDp * 0.1f,
+                top = spacing.smallSpacing,
+                bottom = spacing.smallSpacing
+            ),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Live Source Attenuation",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF00BCD4)
         )
+        Text(
+            text = if (isExpanded) "▼" else "▶",
+            fontSize = 16.sp,
+            color = Color(0xFF00BCD4)
+        )
+    }
+
+    // Collapsible content
+    if (isExpanded) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f)
+        ) {
+            // Row 1: Active | Radius | Shape | Attenuation
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+            ) {
+                // Active
+                Column(modifier = Modifier.weight(1f)) {
+                    ParameterTextButton(
+                        label = "Active",
+                        selectedIndex = liveSourceActiveIndex,
+                        options = listOf("ON", "OFF"),
+                        onSelectionChange = { index ->
+                            liveSourceActiveIndex = index
+                            selectedChannel.setParameter("liveSourceActive", InputParameterValue(
+                                normalizedValue = index.toFloat(),
+                                stringValue = "",
+                                displayValue = listOf("ON", "OFF")[index]
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, 1 - index)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Radius
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Radius", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    WidthExpansionSlider(
+                        value = radiusValue,
+                        onValueChange = { newValue ->
+                            radiusValue = newValue
+                            // Map 0-1 expansion to 0-50 meters
+                            val actualValue = newValue * 50f
+                            radiusDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            val normalized = actualValue / 50f
+                            selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
+                                normalizedValue = normalized,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}m"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isLiveSourceEnabled) Color(0xFF2196F3) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = radiusDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val coercedValue = value.coerceIn(0f, 50f)
+                                val expansionValue = coercedValue / 50f
+                                radiusValue = expansionValue
+                                radiusDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourceRadius", InputParameterValue(
+                                    normalizedValue = expansionValue,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}m"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "m",
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
+                        enabled = true
+                    )
+                }
+
+                // Shape
+                Column(modifier = Modifier.weight(1f)) {
+                    ParameterDropdown(
+                        label = "Shape",
+                        selectedIndex = liveSourceShapeIndex,
+                        options = listOf("linear", "log", "square d²", "sine"),
+                        onSelectionChange = { index ->
+                            liveSourceShapeIndex = index
+                            selectedChannel.setParameter("liveSourceShape", InputParameterValue(
+                                normalizedValue = index.toFloat(),
+                                stringValue = "",
+                                displayValue = listOf("linear", "log", "square d²", "sine")[index]
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/liveSourceShape", inputId, index)
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        enabled = isLiveSourceEnabled
+                    )
+                }
+
+                // Attenuation
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Attenuation", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = liveSourceAttenuationValue,
+                        onValueChange = { newValue ->
+                            liveSourceAttenuationValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isLiveSourceEnabled) Color(0xFF9C27B0) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = liveSourceAttenuationDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["liveSourceAttenuation"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                liveSourceAttenuationValue = normalized
+                                liveSourceAttenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourceAttenuation", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(spacing.largeSpacing))
+
+            // Row 2: Peak Threshold | Peak Ratio | Slow Threshold | Slow Ratio
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Peak Threshold
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Peak Threshold", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = liveSourcePeakThresholdValue,
+                        onValueChange = { newValue ->
+                            liveSourcePeakThresholdValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isLiveSourceEnabled) Color(0xFFFF9800) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = liveSourcePeakThresholdDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakThreshold"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                liveSourcePeakThresholdValue = normalized
+                                liveSourcePeakThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourcePeakThreshold", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
+                    )
+                }
+
+                // Peak Ratio
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Peak Ratio", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    BasicDial(
+                        value = liveSourcePeakRatioValue,
+                        onValueChange = { newValue ->
+                            liveSourcePeakRatioValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = String.format(Locale.US, "%.2f", actualValue)
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, actualValue)
+                        },
+                        dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
+                        indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
+                        trackColor = if (isLiveSourceEnabled) Color(0xFF673AB7) else Color.DarkGray,
+                        displayedValue = liveSourcePeakRatioDisplayValue,
+                        valueUnit = "",
+                        isValueEditable = true,
+                        onDisplayedValueChange = {},
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["liveSourcePeakRatio"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                liveSourcePeakRatioValue = normalized
+                                liveSourcePeakRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourcePeakRatio", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakRatio", inputId, coercedValue)
+                            }
+                        },
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
+                        enabled = true,
+                        sizeMultiplier = 0.7f
+                    )
+                }
+
+                // Slow Threshold
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Slow Threshold", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = liveSourceSlowThresholdValue,
+                        onValueChange = { newValue ->
+                            liveSourceSlowThresholdValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isLiveSourceEnabled) Color(0xFF4CAF50) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = liveSourceSlowThresholdDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowThreshold"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                liveSourceSlowThresholdValue = normalized
+                                liveSourceSlowThresholdDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourceSlowThreshold", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray
+                    )
+                }
+
+                // Slow Ratio
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Slow Ratio", fontSize = 12.sp, color = if (isLiveSourceEnabled) Color.White else Color.Gray)
+                    BasicDial(
+                        value = liveSourceSlowRatioValue,
+                        onValueChange = { newValue ->
+                            liveSourceSlowRatioValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = String.format(Locale.US, "%.2f", actualValue)
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, actualValue)
+                        },
+                        dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
+                        indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
+                        trackColor = if (isLiveSourceEnabled) Color(0xFFE91E63) else Color.DarkGray,
+                        displayedValue = liveSourceSlowRatioDisplayValue,
+                        valueUnit = "",
+                        isValueEditable = true,
+                        onDisplayedValueChange = {},
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["liveSourceSlowRatio"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                liveSourceSlowRatioValue = normalized
+                                liveSourceSlowRatioDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("liveSourceSlowRatio", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowRatio", inputId, coercedValue)
+                            }
+                        },
+                        valueTextColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
+                        enabled = true,
+                        sizeMultiplier = 0.7f
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -1626,10 +1661,12 @@ private fun RenderFloorReflectionsSection(
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
-    spacing: ResponsiveSpacing
+    spacing: ResponsiveSpacing,
+    screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    
+    var isExpanded by remember { mutableStateOf(false) }
+
     // Active
     val FRactive = selectedChannel.getParameter("FRactive")
     var FRactiveIndex by remember {
@@ -1639,28 +1676,9 @@ private fun RenderFloorReflectionsSection(
     LaunchedEffect(inputId, FRactive.normalizedValue) {
         FRactiveIndex = FRactive.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
+
     val isFREnabled = FRactiveIndex == 0 // 0 = ON, 1 = OFF
-    
-    ParameterTextButton(
-        label = "Active",
-        selectedIndex = FRactiveIndex,
-        options = listOf("ON", "OFF"),
-        onSelectionChange = { index ->
-            FRactiveIndex = index
-            selectedChannel.setParameter("FRactive", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("ON", "OFF")[index]
-            ))
-            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
-            viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, 1 - index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // FRattenuation
     val FRattenuation = selectedChannel.getParameter("FRattentuation")
     var FRattenuationValue by remember { mutableStateOf(FRattenuation.normalizedValue) }
@@ -1672,57 +1690,7 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRattenuation.normalizedValue)
         FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Attenuation", fontSize = 12.sp, color = if (isFREnabled) Color.White else Color.Gray)
-            StandardSlider(
-                value = FRattenuationValue,
-                onValueChange = { newValue ->
-                    FRattenuationValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("FRattentuation", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = if (isFREnabled) Color(0xFF2196F3) else Color.Gray,
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = FRattenuationDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        FRattenuationValue = normalized
-                        FRattenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("FRattentuation", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = if (isFREnabled) Color.White else Color.Gray
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Low Cut Active
     val FRlowCutActive = selectedChannel.getParameter("FRlowCutActive")
     var FRlowCutActiveIndex by remember {
@@ -1732,28 +1700,9 @@ private fun RenderFloorReflectionsSection(
     LaunchedEffect(inputId, FRlowCutActive.normalizedValue) {
         FRlowCutActiveIndex = FRlowCutActive.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
+
     val isFRLowCutEnabled = isFREnabled && FRlowCutActiveIndex == 0
-    
-    ParameterTextButton(
-        label = "Low Cut Active",
-        selectedIndex = FRlowCutActiveIndex,
-        options = listOf("ON", "OFF"),
-        onSelectionChange = { index ->
-            FRlowCutActiveIndex = index
-            selectedChannel.setParameter("FRlowCutActive", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("ON", "OFF")[index]
-            ))
-            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
-            viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, 1 - index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Low Cut Freq
     val FRlowCutFreq = selectedChannel.getParameter("FRlowCutFreq")
     var FRlowCutFreqValue by remember { mutableStateOf(FRlowCutFreq.normalizedValue) }
@@ -1765,54 +1714,7 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRlowCutFreq.normalizedValue)
         FRlowCutFreqDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("Low Cut Freq", fontSize = 12.sp, color = if (isFRLowCutEnabled) Color.White else Color.Gray)
-        StandardSlider(
-            value = FRlowCutFreqValue,
-            onValueChange = { newValue ->
-                FRlowCutFreqValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                FRlowCutFreqDisplayValue = actualValue.toInt().toString()
-                selectedChannel.setParameter("FRlowCutFreq", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}Hz"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/FrlowCutFreq", inputId, actualValue.toInt())
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = if (isFRLowCutEnabled) Color(0xFFCDDC39) else Color.Gray,
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            displayedValue = FRlowCutFreqDisplayValue,
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Typing handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt()
-                    val coercedValue = roundedValue.coerceIn(20, 20000)
-                    val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
-                    FRlowCutFreqValue = normalized
-                    FRlowCutFreqDisplayValue = coercedValue.toString()
-                    selectedChannel.setParameter("FRlowCutFreq", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${coercedValue}Hz"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/FrlowCutFreq", inputId, coercedValue)
-                }
-            },
-            valueUnit = "Hz",
-            valueTextColor = if (isFRLowCutEnabled) Color.White else Color.Gray
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // High Shelf Active
     val FRhighShelfActive = selectedChannel.getParameter("FRhighShelfActive")
     var FRhighShelfActiveIndex by remember {
@@ -1822,28 +1724,9 @@ private fun RenderFloorReflectionsSection(
     LaunchedEffect(inputId, FRhighShelfActive.normalizedValue) {
         FRhighShelfActiveIndex = FRhighShelfActive.normalizedValue.toInt().coerceIn(0, 1)
     }
-    
+
     val isFRHighShelfEnabled = isFREnabled && FRhighShelfActiveIndex == 0
-    
-    ParameterTextButton(
-        label = "High Shelf Active",
-        selectedIndex = FRhighShelfActiveIndex,
-        options = listOf("ON", "OFF"),
-        onSelectionChange = { index ->
-            FRhighShelfActiveIndex = index
-            selectedChannel.setParameter("FRhighShelfActive", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("ON", "OFF")[index]
-            ))
-            // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
-            viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, 1 - index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // High Shelf Freq
     val FRhighShelfFreq = selectedChannel.getParameter("FRhighShelfFreq")
     var FRhighShelfFreqValue by remember { mutableStateOf(FRhighShelfFreq.normalizedValue) }
@@ -1855,54 +1738,7 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfFreq.normalizedValue)
         FRhighShelfFreqDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("High Shelf Freq", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
-        StandardSlider(
-            value = FRhighShelfFreqValue,
-            onValueChange = { newValue ->
-                FRhighShelfFreqValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                FRhighShelfFreqDisplayValue = actualValue.toInt().toString()
-                selectedChannel.setParameter("FRhighShelfFreq", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}Hz"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/FRhighShelfFreq", inputId, actualValue.toInt())
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = if (isFRHighShelfEnabled) Color(0xFF009688) else Color.Gray,
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            displayedValue = FRhighShelfFreqDisplayValue,
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Typing handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt()
-                    val coercedValue = roundedValue.coerceIn(20, 20000)
-                    val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
-                    FRhighShelfFreqValue = normalized
-                    FRhighShelfFreqDisplayValue = coercedValue.toString()
-                    selectedChannel.setParameter("FRhighShelfFreq", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${coercedValue}Hz"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/FRhighShelfFreq", inputId, coercedValue)
-                }
-            },
-            valueUnit = "Hz",
-            valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // High Shelf Gain
     val FRhighShelfGain = selectedChannel.getParameter("FRhighShelfGain")
     var FRhighShelfGainValue by remember { mutableStateOf(FRhighShelfGain.normalizedValue) }
@@ -1914,57 +1750,7 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfGain.normalizedValue)
         FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("High Shelf Gain", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
-            StandardSlider(
-                value = FRhighShelfGainValue,
-                onValueChange = { newValue ->
-                    FRhighShelfGainValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF5722) else Color.Gray,
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = FRhighShelfGainDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        FRhighShelfGainValue = normalized
-                        FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // High Shelf Slope
     val FRhighShelfSlope = selectedChannel.getParameter("FRhighShelfSlope")
     var FRhighShelfSlopeValue by remember { mutableStateOf(FRhighShelfSlope.normalizedValue) }
@@ -1976,52 +1762,7 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRhighShelfSlope.normalizedValue)
         FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Column {
-        Text("High Shelf Slope", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
-        StandardSlider(
-            value = FRhighShelfSlopeValue,
-            onValueChange = { newValue ->
-                FRhighShelfSlopeValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = String.format(Locale.US, "%.2f", actualValue)
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, actualValue)
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF9800) else Color.Gray,
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            displayedValue = FRhighShelfSlopeDisplayValue,
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Typing handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(0.1f, 0.9f)
-                    val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
-                    val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                    FRhighShelfSlopeValue = normalized
-                    FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, coercedValue)
-                }
-            },
-            valueUnit = "",
-            valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Diffusion
     val FRdiffusion = selectedChannel.getParameter("FRdiffusion")
     var FRdiffusionValue by remember { mutableStateOf(FRdiffusion.normalizedValue) }
@@ -2035,49 +1776,387 @@ private fun RenderFloorReflectionsSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRdiffusion.normalizedValue)
         FRdiffusionDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("Diffusion", fontSize = 12.sp, color = if (isFREnabled) Color.White else Color.Gray)
-        BasicDial(
-            value = FRdiffusionValue,
-            onValueChange = { newValue ->
-                FRdiffusionValue = newValue
-                val definition = InputParameterDefinitions.parametersByVariableName["FRdiffusion"]!!
-                val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                FRdiffusionDisplayValue = actualValue.toInt().toString()
-                selectedChannel.setParameter("FRdiffusion", InputParameterValue(
-                    normalizedValue = newValue,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}%"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/FRdiffusion", inputId, actualValue.toInt())
-            },
-            dialColor = if (isFREnabled) Color.DarkGray else Color(0xFF2A2A2A),
-            indicatorColor = if (isFREnabled) Color.White else Color.Gray,
-            trackColor = if (isFREnabled) Color(0xFF795548) else Color.DarkGray,
-            displayedValue = FRdiffusionDisplayValue,
-            valueUnit = "%",
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt()
-                    val coercedValue = roundedValue.coerceIn(0, 100)
-                    val normalized = coercedValue / 100f
-                    FRdiffusionValue = normalized
-                    FRdiffusionDisplayValue = coercedValue.toString()
-                    selectedChannel.setParameter("FRdiffusion", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${coercedValue}%"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/FRdiffusion", inputId, coercedValue)
-                }
-            },
-            valueTextColor = if (isFREnabled) Color.White else Color.Gray,
-            enabled = true
+
+    // Collapsible Header
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded }
+            .padding(
+                start = screenWidthDp * 0.1f,
+                end = screenWidthDp * 0.1f,
+                top = spacing.smallSpacing,
+                bottom = spacing.smallSpacing
+            ),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Floor Reflections",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF00BCD4)
         )
+        Text(
+            text = if (isExpanded) "▼" else "▶",
+            fontSize = 16.sp,
+            color = Color(0xFF00BCD4)
+        )
+    }
+
+    // Collapsible content
+    if (isExpanded) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f)
+        ) {
+            // Row 1: Active | Attenuation | Low Cut Active | Low Cut Freq
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+            ) {
+                // Active
+                Column(modifier = Modifier.weight(1f)) {
+                    ParameterTextButton(
+                        label = "Active",
+                        selectedIndex = FRactiveIndex,
+                        options = listOf("ON", "OFF"),
+                        onSelectionChange = { index ->
+                            FRactiveIndex = index
+                            selectedChannel.setParameter("FRactive", InputParameterValue(
+                                normalizedValue = index.toFloat(),
+                                stringValue = "",
+                                displayValue = listOf("ON", "OFF")[index]
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, 1 - index)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Attenuation
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Attenuation", fontSize = 12.sp, color = if (isFREnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = FRattenuationValue,
+                        onValueChange = { newValue ->
+                            FRattenuationValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("FRattentuation", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isFREnabled) Color(0xFF2196F3) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = FRattenuationDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                FRattenuationValue = normalized
+                                FRattenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("FRattentuation", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = if (isFREnabled) Color.White else Color.Gray
+                    )
+                }
+
+                // Low Cut Active
+                Column(modifier = Modifier.weight(1f)) {
+                    ParameterTextButton(
+                        label = "Low Cut Active",
+                        selectedIndex = FRlowCutActiveIndex,
+                        options = listOf("ON", "OFF"),
+                        onSelectionChange = { index ->
+                            FRlowCutActiveIndex = index
+                            selectedChannel.setParameter("FRlowCutActive", InputParameterValue(
+                                normalizedValue = index.toFloat(),
+                                stringValue = "",
+                                displayValue = listOf("ON", "OFF")[index]
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, 1 - index)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // Low Cut Freq
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Low Cut Freq", fontSize = 12.sp, color = if (isFRLowCutEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = FRlowCutFreqValue,
+                        onValueChange = { newValue ->
+                            FRlowCutFreqValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRlowCutFreqDisplayValue = actualValue.toInt().toString()
+                            selectedChannel.setParameter("FRlowCutFreq", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${actualValue.toInt()}Hz"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FrlowCutFreq", inputId, actualValue.toInt())
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isFRLowCutEnabled) Color(0xFFCDDC39) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = FRlowCutFreqDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val roundedValue = value.roundToInt()
+                                val coercedValue = roundedValue.coerceIn(20, 20000)
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRlowCutFreq"]!!
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
+                                FRlowCutFreqValue = normalized
+                                FRlowCutFreqDisplayValue = coercedValue.toString()
+                                selectedChannel.setParameter("FRlowCutFreq", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${coercedValue}Hz"
+                                ))
+                                viewModel.sendInputParameterInt("/remoteInput/FrlowCutFreq", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "Hz",
+                        valueTextColor = if (isFRLowCutEnabled) Color.White else Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(spacing.largeSpacing))
+
+            // Row 2: High Shelf Active | High Shelf Freq | High Shelf Gain | High Shelf Slope
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // High Shelf Active
+                Column(modifier = Modifier.weight(1f)) {
+                    ParameterTextButton(
+                        label = "High Shelf Active",
+                        selectedIndex = FRhighShelfActiveIndex,
+                        options = listOf("ON", "OFF"),
+                        onSelectionChange = { index ->
+                            FRhighShelfActiveIndex = index
+                            selectedChannel.setParameter("FRhighShelfActive", InputParameterValue(
+                                normalizedValue = index.toFloat(),
+                                stringValue = "",
+                                displayValue = listOf("ON", "OFF")[index]
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, 1 - index)
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+
+                // High Shelf Freq
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("High Shelf Freq", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = FRhighShelfFreqValue,
+                        onValueChange = { newValue ->
+                            FRhighShelfFreqValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRhighShelfFreqDisplayValue = actualValue.toInt().toString()
+                            selectedChannel.setParameter("FRhighShelfFreq", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${actualValue.toInt()}Hz"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FRhighShelfFreq", inputId, actualValue.toInt())
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isFRHighShelfEnabled) Color(0xFF009688) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = FRhighShelfFreqDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val roundedValue = value.roundToInt()
+                                val coercedValue = roundedValue.coerceIn(20, 20000)
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfFreq"]!!
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue.toFloat())
+                                FRhighShelfFreqValue = normalized
+                                FRhighShelfFreqDisplayValue = coercedValue.toString()
+                                selectedChannel.setParameter("FRhighShelfFreq", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${coercedValue}Hz"
+                                ))
+                                viewModel.sendInputParameterInt("/remoteInput/FRhighShelfFreq", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "Hz",
+                        valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
+                    )
+                }
+
+                // High Shelf Gain
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("High Shelf Gain", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = FRhighShelfGainValue,
+                        onValueChange = { newValue ->
+                            FRhighShelfGainValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF5722) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = FRhighShelfGainDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfGain"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                FRhighShelfGainValue = normalized
+                                FRhighShelfGainDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("FRhighShelfGain", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
+                    )
+                }
+
+                // High Shelf Slope
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("High Shelf Slope", fontSize = 12.sp, color = if (isFRHighShelfEnabled) Color.White else Color.Gray)
+                    StandardSlider(
+                        value = FRhighShelfSlopeValue,
+                        onValueChange = { newValue ->
+                            FRhighShelfSlopeValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = String.format(Locale.US, "%.2f", actualValue)
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF9800) else Color.Gray,
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = FRhighShelfSlopeDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val coercedValue = value.coerceIn(0.1f, 0.9f)
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRhighShelfSlope"]!!
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                FRhighShelfSlopeValue = normalized
+                                FRhighShelfSlopeDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("FRhighShelfSlope", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "",
+                        valueTextColor = if (isFRHighShelfEnabled) Color.White else Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(spacing.largeSpacing))
+
+            // Row 3: Diffusion (centered)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Diffusion", fontSize = 12.sp, color = if (isFREnabled) Color.White else Color.Gray)
+                    BasicDial(
+                        value = FRdiffusionValue,
+                        onValueChange = { newValue ->
+                            FRdiffusionValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRdiffusion"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            FRdiffusionDisplayValue = actualValue.toInt().toString()
+                            selectedChannel.setParameter("FRdiffusion", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${actualValue.toInt()}%"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/FRdiffusion", inputId, actualValue.toInt())
+                        },
+                        dialColor = if (isFREnabled) Color.DarkGray else Color(0xFF2A2A2A),
+                        indicatorColor = if (isFREnabled) Color.White else Color.Gray,
+                        trackColor = if (isFREnabled) Color(0xFF795548) else Color.DarkGray,
+                        displayedValue = FRdiffusionDisplayValue,
+                        valueUnit = "%",
+                        isValueEditable = true,
+                        onDisplayedValueChange = {},
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val roundedValue = value.roundToInt()
+                                val coercedValue = roundedValue.coerceIn(0, 100)
+                                val normalized = coercedValue / 100f
+                                FRdiffusionValue = normalized
+                                FRdiffusionDisplayValue = coercedValue.toString()
+                                selectedChannel.setParameter("FRdiffusion", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${coercedValue}%"
+                                ))
+                                viewModel.sendInputParameterInt("/remoteInput/FRdiffusion", inputId, coercedValue)
+                            }
+                        },
+                        valueTextColor = if (isFREnabled) Color.White else Color.Gray,
+                        enabled = true,
+                        sizeMultiplier = 0.7f
+                    )
+                }
+            }
+        }
     }
 }
 
