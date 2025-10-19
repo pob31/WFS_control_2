@@ -3,10 +3,7 @@ package com.wfsdiy.wfs_control_2
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGestures
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.ImeAction
@@ -126,7 +123,8 @@ fun BasicDial(
     val responsiveSizes = getResponsiveDialSizes()
     val dialSize = responsiveSizes.dialSize * sizeMultiplier
     val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
-    
+    val textSize = responsiveSizes.dialSize // Original size for text, unaffected by multiplier
+
     // Convert value (0.0 to 1.0) to angle with dead zone at bottom
     val deadZoneAngle = 60f // Dead zone at bottom center
     val activeAngleRange = 360f - deadZoneAngle // 300° active range
@@ -251,56 +249,61 @@ fun BasicDial(
 
         // Show value text at bottom in dead zone
         Box(
-            modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-dialSize * 0.15f)),
+            modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-dialSize * 0.2f)),
             contentAlignment = Alignment.Center
         ) {
             if (isValueEditable) {
                 var textFieldValue by remember { mutableStateOf(TextFieldValue(displayedValue)) }
-                
+
                 // Update text field when displayedValue changes (from dial rotation)
                 LaunchedEffect(displayedValue) {
                     textFieldValue = TextFieldValue(displayedValue, selection = TextRange(displayedValue.length))
                 }
-                
+
                 val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
-                
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { newValue ->
-                        textFieldValue = newValue
-                        onDisplayedValueChange(newValue.text)
-                    },
-                    textStyle = TextStyle(
+
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(2.dp)
+                ) {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                            onDisplayedValueChange(newValue.text)
+                        },
+                        textStyle = TextStyle(
+                            color = valueTextColor,
+                            fontSize = (textSize.value * 0.12f).sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        ),
+                        singleLine = true,
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
+                            keyboardType = KeyboardType.Decimal,
+                            imeAction = androidx.compose.ui.text.input.ImeAction.Done
+                        ),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(
+                            onDone = {
+                                onValueCommit(textFieldValue.text)
+                                focusManager.clearFocus()
+                            }
+                        ),
+                        modifier = Modifier
+                            .widthIn(min = dialSize * 0.3f, max = dialSize * 0.6f)
+                    )
+
+                    // Show unit below the editable value
+                    Text(
+                        text = valueUnit,
                         color = valueTextColor,
-                        fontSize = (dialSize.value * 0.12f).sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    ),
-                    singleLine = true,
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(
-                        keyboardType = KeyboardType.Decimal,
-                        imeAction = androidx.compose.ui.text.input.ImeAction.Done
-                    ),
-                    keyboardActions = androidx.compose.foundation.text.KeyboardActions(
-                        onDone = {
-                            onValueCommit(textFieldValue.text)
-                            focusManager.clearFocus()
-                        }
-                    ),
-                    modifier = Modifier.size(width = dialSize * 0.6f, height = dialSize * 0.15f)
-                )
-                
-                // Show unit below the editable value
-                Text(
-                    text = valueUnit,
-                    color = valueTextColor,
-                    fontSize = (dialSize.value * 0.08f).sp,
-                    modifier = Modifier.offset(y = dialSize * 0.1f)
-                )
+                        fontSize = (textSize.value * 0.08f).sp
+                    )
+                }
             } else {
                 Text(
                     text = "$displayedValue$valueUnit",
                     color = valueTextColor,
-                    fontSize = (dialSize.value * 0.12f).sp,
+                    fontSize = (textSize.value * 0.12f).sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -540,6 +543,7 @@ fun AngleDial(
     val responsiveSizes = getResponsiveDialSizes()
     val dialSize = responsiveSizes.dialSize * sizeMultiplier
     val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
+    val textSize = responsiveSizes.dialSize // Original size for text, unaffected by multiplier
 
     // Convert value (-180° to +180°) to Compose angle
     // 0° is at bottom (90° in Compose)
@@ -622,57 +626,35 @@ fun AngleDial(
             if (isValueEditable) {
                 var textFieldValue by remember { mutableStateOf(TextFieldValue(String.format(Locale.US, "%.1f", value))) }
                 val focusManager = LocalFocusManager.current
-                
+
                 // Update text when value changes
                 LaunchedEffect(value) {
                     textFieldValue = TextFieldValue(String.format(Locale.US, "%.1f", value))
                 }
-                
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { newValue ->
-                        textFieldValue = newValue
-                    },
-                    textStyle = TextStyle(
-                        color = valueTextColor,
-                        fontSize = (dialSize.value * 0.12f).sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    ),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            // Apply modulo operation when Done is pressed
-                            try {
-                                val parsedValue = textFieldValue.text.toFloatOrNull()
-                                if (parsedValue != null) {
-                                    // Round to nearest integer and apply modulo operation: ((x+540)%360)-180
-                                    val roundedValue = parsedValue.roundToInt().toFloat()
-                                    val normalizedValue = ((roundedValue + 540f) % 360f) - 180f
-                                    onValueChange(normalizedValue)
-                                }
-                            } catch (e: NumberFormatException) {
-                                // Ignore invalid input
-                            }
-                            // Close the keyboard
-                            focusManager.clearFocus()
-                        }
-                    ),
-                    modifier = Modifier
-                        .size(width = dialSize * 0.6f, height = dialSize * 0.15f)
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                // Select all text when focused
-                                val text = textFieldValue.text
-                                textFieldValue = TextFieldValue(
-                                    text = text,
-                                    selection = androidx.compose.ui.text.TextRange(0, text.length)
-                                )
-                            } else {
-                                // Apply rounding and modulo when focus is lost
+
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.offset(x = dialSize * 0.05f)
+                ) {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                        },
+                        textStyle = TextStyle(
+                            color = valueTextColor,
+                            fontSize = (textSize.value * 0.12f).sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                // Apply modulo operation when Done is pressed
                                 try {
                                     val parsedValue = textFieldValue.text.toFloatOrNull()
                                     if (parsedValue != null) {
@@ -684,22 +666,48 @@ fun AngleDial(
                                 } catch (e: NumberFormatException) {
                                     // Ignore invalid input
                                 }
+                                // Close the keyboard
+                                focusManager.clearFocus()
                             }
-                        }
-                )
-                
-                // Show unit below the editable value
-                Text(
-                    text = "°",
-                    color = valueTextColor,
-                    fontSize = (dialSize.value * 0.08f).sp,
-                    modifier = Modifier.offset(y = dialSize * 0.1f)
-                )
+                        ),
+                        modifier = Modifier
+                            .widthIn(min = dialSize * 0.2f, max = dialSize * 0.5f)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    // Select all text when focused
+                                    val text = textFieldValue.text
+                                    textFieldValue = TextFieldValue(
+                                        text = text,
+                                        selection = androidx.compose.ui.text.TextRange(0, text.length)
+                                    )
+                                } else {
+                                    // Apply rounding and modulo when focus is lost
+                                    try {
+                                        val parsedValue = textFieldValue.text.toFloatOrNull()
+                                        if (parsedValue != null) {
+                                            // Round to nearest integer and apply modulo operation: ((x+540)%360)-180
+                                            val roundedValue = parsedValue.roundToInt().toFloat()
+                                            val normalizedValue = ((roundedValue + 540f) % 360f) - 180f
+                                            onValueChange(normalizedValue)
+                                        }
+                                    } catch (e: NumberFormatException) {
+                                        // Ignore invalid input
+                                    }
+                                }
+                            }
+                    )
+
+                    Text(
+                        text = "°",
+                        color = valueTextColor,
+                        fontSize = (textSize.value * 0.12f).sp
+                    )
+                }
             } else {
                 Text(
                     text = "${String.format(Locale.US, "%.1f", value)}°",
                     color = valueTextColor,
-                    fontSize = (dialSize.value * 0.12f).sp,
+                    fontSize = (textSize.value * 0.12f).sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
@@ -740,6 +748,7 @@ fun PhaseDial(
     val responsiveSizes = getResponsiveDialSizes()
     val dialSize = responsiveSizes.dialSize * sizeMultiplier
     val strokeWidth = responsiveSizes.strokeWidth * sizeMultiplier
+    val textSize = responsiveSizes.dialSize // Original size for text, unaffected by multiplier
 
     // Normalize value to 0-359 range
     val normalizedValue = ((value % 360f) + 360f) % 360f
@@ -830,49 +839,29 @@ fun PhaseDial(
                     textFieldValue = TextFieldValue(String.format(Locale.US, "%.0f", normalizedValue))
                 }
 
-                BasicTextField(
-                    value = textFieldValue,
-                    onValueChange = { newValue ->
-                        textFieldValue = newValue
-                    },
-                    textStyle = TextStyle(
-                        color = valueTextColor,
-                        fontSize = (dialSize.value * 0.12f).sp,
-                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
-                    ),
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(
-                        keyboardType = KeyboardType.Number,
-                        imeAction = ImeAction.Done
-                    ),
-                    keyboardActions = KeyboardActions(
-                        onDone = {
-                            // Normalize value to 0-359 when Done is pressed
-                            try {
-                                val parsedValue = textFieldValue.text.toFloatOrNull()
-                                if (parsedValue != null) {
-                                    val normalized = ((parsedValue % 360f) + 360f) % 360f
-                                    onValueChange(normalized)
-                                }
-                            } catch (e: NumberFormatException) {
-                                // Ignore invalid input
-                            }
-                            // Close the keyboard
-                            focusManager.clearFocus()
-                        }
-                    ),
-                    modifier = Modifier
-                        .size(width = dialSize * 0.6f, height = dialSize * 0.15f)
-                        .onFocusChanged { focusState ->
-                            if (focusState.isFocused) {
-                                // Select all text when focused
-                                val text = textFieldValue.text
-                                textFieldValue = TextFieldValue(
-                                    text = text,
-                                    selection = androidx.compose.ui.text.TextRange(0, text.length)
-                                )
-                            } else {
-                                // Normalize value to 0-359 when focus is lost
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.offset(x = dialSize * 0.05f)
+                ) {
+                    BasicTextField(
+                        value = textFieldValue,
+                        onValueChange = { newValue ->
+                            textFieldValue = newValue
+                        },
+                        textStyle = TextStyle(
+                            color = valueTextColor,
+                            fontSize = (textSize.value * 0.12f).sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.End
+                        ),
+                        singleLine = true,
+                        keyboardOptions = KeyboardOptions(
+                            keyboardType = KeyboardType.Number,
+                            imeAction = ImeAction.Done
+                        ),
+                        keyboardActions = KeyboardActions(
+                            onDone = {
+                                // Normalize value to 0-359 when Done is pressed
                                 try {
                                     val parsedValue = textFieldValue.text.toFloatOrNull()
                                     if (parsedValue != null) {
@@ -882,22 +871,46 @@ fun PhaseDial(
                                 } catch (e: NumberFormatException) {
                                     // Ignore invalid input
                                 }
+                                // Close the keyboard
+                                focusManager.clearFocus()
                             }
-                        }
-                )
+                        ),
+                        modifier = Modifier
+                            .widthIn(min = dialSize * 0.2f, max = dialSize * 0.5f)
+                            .onFocusChanged { focusState ->
+                                if (focusState.isFocused) {
+                                    // Select all text when focused
+                                    val text = textFieldValue.text
+                                    textFieldValue = TextFieldValue(
+                                        text = text,
+                                        selection = androidx.compose.ui.text.TextRange(0, text.length)
+                                    )
+                                } else {
+                                    // Normalize value to 0-359 when focus is lost
+                                    try {
+                                        val parsedValue = textFieldValue.text.toFloatOrNull()
+                                        if (parsedValue != null) {
+                                            val normalized = ((parsedValue % 360f) + 360f) % 360f
+                                            onValueChange(normalized)
+                                        }
+                                    } catch (e: NumberFormatException) {
+                                        // Ignore invalid input
+                                    }
+                                }
+                            }
+                    )
 
-                // Show unit below the editable value
-                Text(
-                    text = "°",
-                    color = valueTextColor,
-                    fontSize = (dialSize.value * 0.08f).sp,
-                    modifier = Modifier.offset(y = dialSize * 0.1f)
-                )
+                    Text(
+                        text = "°",
+                        color = valueTextColor,
+                        fontSize = (textSize.value * 0.12f).sp
+                    )
+                }
             } else {
                 Text(
                     text = "${String.format(Locale.US, "%.0f", normalizedValue)}°",
                     color = valueTextColor,
-                    fontSize = (dialSize.value * 0.12f).sp,
+                    fontSize = (textSize.value * 0.12f).sp,
                     textAlign = androidx.compose.ui.text.style.TextAlign.Center
                 )
             }
