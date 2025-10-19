@@ -19,6 +19,31 @@ import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sqrt
 
+/**
+ * Returns a color for a given row index in the InputParametersTab.
+ * Similar to getMarkerColor() but for row-based theming.
+ * Each row gets a distinct hue with consistent saturation and lightness.
+ */
+private fun getRowColor(rowIndex: Int): Color {
+    val totalRows = 10
+    val hue = (rowIndex * 360f / totalRows) % 360f
+    return Color.hsl(hue, 0.75f, 0.6f)
+}
+
+/**
+ * Returns a lighter variation of the row color for track backgrounds.
+ */
+private fun getRowColorLight(rowIndex: Int): Color {
+    return getRowColor(rowIndex).copy(alpha = 0.3f)
+}
+
+/**
+ * Returns a more vibrant variation of the row color for active tracks.
+ */
+private fun getRowColorActive(rowIndex: Int): Color {
+    return getRowColor(rowIndex).copy(alpha = 0.75f)
+}
+
 @Composable
 fun InputParametersTab(
     viewModel: MainActivityViewModel
@@ -289,8 +314,8 @@ private fun RenderInputSection(
                     viewModel.sendInputParameterFloat("/remoteInput/attenuation", inputId, actualValue)
                 },
                 modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                sliderColor = Color(0xFFFF5722),
-                trackBackgroundColor = Color.DarkGray,
+                sliderColor = getRowColor(0),
+                trackBackgroundColor = getRowColorLight(0),
                 orientation = SliderOrientation.HORIZONTAL,
                 displayedValue = attenuationDisplayValue,
                 isValueEditable = true,
@@ -332,8 +357,8 @@ private fun RenderInputSection(
                     viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, newValue)
                 },
                 modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                sliderColor = Color(0xFF4CAF50),
-                trackBackgroundColor = Color.DarkGray,
+                sliderColor = getRowColor(0),
+                trackBackgroundColor = getRowColorLight(0),
                 orientation = SliderOrientation.HORIZONTAL,
                 valueRange = -100f..100f,
                 displayedValue = delayLatencyDisplayValue,
@@ -373,6 +398,8 @@ private fun RenderInputSection(
                     ))
                     viewModel.sendInputParameterInt("/remoteInput/minimalLatency", inputId, index)
                 },
+                activeColor = getRowColorActive(0),
+                inactiveColor = getRowColorLight(0),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -578,8 +605,8 @@ private fun RenderInputSection(
                 modifier = Modifier
                     .height(verticalSliderHeight)
                     .width(verticalSliderWidth),
-                sliderColor = Color(0xFF4CAF50),
-                trackBackgroundColor = Color.DarkGray,
+                sliderColor = getRowColor(1),
+                trackBackgroundColor = getRowColorLight(1),
                 orientation = SliderOrientation.VERTICAL,
                 valueRange = -1f..1f,
                 centerValue = 0f
@@ -700,6 +727,8 @@ private fun RenderInputSection(
                     ))
                     viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, 1 - index)
                 },
+                activeColor = getRowColorActive(3),
+                inactiveColor = getRowColorLight(3),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -722,6 +751,8 @@ private fun RenderInputSection(
                     ))
                     viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
                 },
+                activeColor = getRowColorActive(3),
+                inactiveColor = getRowColorLight(3),
                 modifier = Modifier.fillMaxWidth()
             )
         }
@@ -766,7 +797,7 @@ private fun RenderInputSection(
                 },
                 dialColor = if (isMaxSpeedEnabled) Color.DarkGray else Color(0xFF2A2A2A),
                 indicatorColor = if (isMaxSpeedEnabled) Color.White else Color.Gray,
-                trackColor = if (isMaxSpeedEnabled) Color(0xFF00BCD4) else Color.DarkGray,
+                trackColor = if (isMaxSpeedEnabled) getRowColor(3) else Color.DarkGray,
                 displayedValue = maxSpeedDisplayValue,
                 valueUnit = "m/s",
                 isValueEditable = true,
@@ -814,7 +845,7 @@ private fun RenderInputSection(
                 },
                 dialColor = Color.DarkGray,
                 indicatorColor = Color.White,
-                trackColor = Color(0xFFE91E63),
+                trackColor = getRowColor(3),
                 displayedValue = heightFactorDisplayValue,
                 valueUnit = "%",
                 isValueEditable = true,
@@ -864,7 +895,7 @@ private fun RenderInputSection(
                     },
                     dialColor = Color.DarkGray,
                     indicatorColor = Color.White,
-                    trackColor = Color(0xFFFFC107),
+                    trackColor = getRowColor(3),
                     displayedValue = distanceAttenuationDisplayValue,
                     valueUnit = "dB/m",
                     isValueEditable = true,
@@ -909,7 +940,7 @@ private fun RenderInputSection(
                     },
                     dialColor = Color.DarkGray,
                     indicatorColor = Color.White,
-                    trackColor = Color(0xFFFFC107),
+                    trackColor = getRowColor(3),
                     displayedValue = distanceRatioDisplayValue,
                     valueUnit = "x",
                     isValueEditable = true,
@@ -958,7 +989,7 @@ private fun RenderInputSection(
                 },
                 dialColor = Color.DarkGray,
                 indicatorColor = Color.White,
-                trackColor = Color(0xFF3F51B5),
+                trackColor = getRowColor(3),
                 displayedValue = commonAttenDisplayValue,
                 valueUnit = "%",
                 isValueEditable = true,
@@ -1104,8 +1135,8 @@ private fun RenderDirectivitySection(
                             viewModel.sendInputParameterInt("/remoteInput/directivity", inputId, actualValue.toInt())
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = Color(0xFF9C27B0),
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = getRowColor(4),
+                        trackBackgroundColor = getRowColorLight(4),
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = directivityDisplayValue,
                         isValueEditable = true,
@@ -1148,7 +1179,7 @@ private fun RenderDirectivitySection(
                         },
                         dialColor = Color.DarkGray,
                         indicatorColor = Color.White,
-                        trackColor = Color(0xFF4CAF50),
+                        trackColor = getRowColor(4),
                         isValueEditable = true,
                         onDisplayedValueChange = {},
                         valueTextColor = Color.White,
@@ -1174,8 +1205,8 @@ private fun RenderDirectivitySection(
                             viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, newValue.toInt())
                         },
                         modifier = Modifier.height(verticalSliderHeight),
-                        sliderColor = Color(0xFFFF5722),
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = getRowColor(4),
+                        trackBackgroundColor = getRowColorLight(4),
                         orientation = SliderOrientation.VERTICAL,
                         valueRange = -90f..90f,
                         displayedValue = tiltDisplayValue,
@@ -1220,8 +1251,8 @@ private fun RenderDirectivitySection(
                             viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = Color(0xFF00BCD4),
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = getRowColor(4),
+                        trackBackgroundColor = getRowColorLight(4),
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = HFshelfDisplayValue,
                         isValueEditable = true,
@@ -1417,6 +1448,8 @@ private fun RenderLiveSourceSection(
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, 1 - index)
                         },
+                        activeColor = getRowColorActive(5),
+                        inactiveColor = getRowColorLight(5),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1440,8 +1473,8 @@ private fun RenderLiveSourceSection(
                             viewModel.sendInputParameterFloat("/remoteInput/liveSourceRadius", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isLiveSourceEnabled) Color(0xFF2196F3) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isLiveSourceEnabled) getRowColor(5) else Color.Gray,
+                        trackBackgroundColor = if (isLiveSourceEnabled) getRowColorLight(5) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = radiusDisplayValue,
                         isValueEditable = true,
@@ -1504,8 +1537,8 @@ private fun RenderLiveSourceSection(
                             viewModel.sendInputParameterFloat("/remoteInput/liveSourceAttenuation", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isLiveSourceEnabled) Color(0xFF9C27B0) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isLiveSourceEnabled) getRowColor(5) else Color.Gray,
+                        trackBackgroundColor = if (isLiveSourceEnabled) getRowColorLight(5) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = liveSourceAttenuationDisplayValue,
                         isValueEditable = true,
@@ -1557,8 +1590,8 @@ private fun RenderLiveSourceSection(
                             viewModel.sendInputParameterFloat("/remoteInput/liveSourcePeakThreshold", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isLiveSourceEnabled) Color(0xFFFF9800) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isLiveSourceEnabled) getRowColor(6) else Color.Gray,
+                        trackBackgroundColor = if (isLiveSourceEnabled) getRowColorLight(6) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = liveSourcePeakThresholdDisplayValue,
                         isValueEditable = true,
@@ -1602,7 +1635,7 @@ private fun RenderLiveSourceSection(
                         },
                         dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
                         indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-                        trackColor = if (isLiveSourceEnabled) Color(0xFF673AB7) else Color.DarkGray,
+                        trackColor = if (isLiveSourceEnabled) getRowColor(6) else Color.DarkGray,
                         displayedValue = liveSourcePeakRatioDisplayValue,
                         valueUnit = "",
                         isValueEditable = true,
@@ -1646,8 +1679,8 @@ private fun RenderLiveSourceSection(
                             viewModel.sendInputParameterFloat("/remoteInput/liveSourceSlowThreshold", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isLiveSourceEnabled) Color(0xFF4CAF50) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isLiveSourceEnabled) getRowColor(6) else Color.Gray,
+                        trackBackgroundColor = if (isLiveSourceEnabled) getRowColorLight(6) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = liveSourceSlowThresholdDisplayValue,
                         isValueEditable = true,
@@ -1691,7 +1724,7 @@ private fun RenderLiveSourceSection(
                         },
                         dialColor = if (isLiveSourceEnabled) Color.DarkGray else Color(0xFF2A2A2A),
                         indicatorColor = if (isLiveSourceEnabled) Color.White else Color.Gray,
-                        trackColor = if (isLiveSourceEnabled) Color(0xFFE91E63) else Color.DarkGray,
+                        trackColor = if (isLiveSourceEnabled) getRowColor(6) else Color.DarkGray,
                         displayedValue = liveSourceSlowRatioDisplayValue,
                         valueUnit = "",
                         isValueEditable = true,
@@ -1899,6 +1932,8 @@ private fun RenderFloorReflectionsSection(
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, 1 - index)
                         },
+                        activeColor = getRowColorActive(7),
+                        inactiveColor = getRowColorLight(7),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1921,8 +1956,8 @@ private fun RenderFloorReflectionsSection(
                             viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isFREnabled) Color(0xFF2196F3) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isFREnabled) getRowColor(7) else Color.Gray,
+                        trackBackgroundColor = if (isFREnabled) getRowColorLight(7) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = FRattenuationDisplayValue,
                         isValueEditable = true,
@@ -1962,6 +1997,8 @@ private fun RenderFloorReflectionsSection(
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, 1 - index)
                         },
+                        activeColor = getRowColorActive(7),
+                        inactiveColor = getRowColorLight(7),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -1984,8 +2021,8 @@ private fun RenderFloorReflectionsSection(
                             viewModel.sendInputParameterInt("/remoteInput/FrlowCutFreq", inputId, actualValue.toInt())
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isFRLowCutEnabled) Color(0xFFCDDC39) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isFRLowCutEnabled) getRowColor(7) else Color.Gray,
+                        trackBackgroundColor = if (isFRLowCutEnabled) getRowColorLight(7) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = FRlowCutFreqDisplayValue,
                         isValueEditable = true,
@@ -2035,6 +2072,8 @@ private fun RenderFloorReflectionsSection(
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, 1 - index)
                         },
+                        activeColor = getRowColorActive(8),
+                        inactiveColor = getRowColorLight(8),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -2057,8 +2096,8 @@ private fun RenderFloorReflectionsSection(
                             viewModel.sendInputParameterInt("/remoteInput/FRhighShelfFreq", inputId, actualValue.toInt())
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isFRHighShelfEnabled) Color(0xFF009688) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isFRHighShelfEnabled) getRowColor(8) else Color.Gray,
+                        trackBackgroundColor = if (isFRHighShelfEnabled) getRowColorLight(8) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = FRhighShelfFreqDisplayValue,
                         isValueEditable = true,
@@ -2102,8 +2141,8 @@ private fun RenderFloorReflectionsSection(
                             viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfGain", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF5722) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isFRHighShelfEnabled) getRowColor(8) else Color.Gray,
+                        trackBackgroundColor = if (isFRHighShelfEnabled) getRowColorLight(8) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = FRhighShelfGainDisplayValue,
                         isValueEditable = true,
@@ -2146,8 +2185,8 @@ private fun RenderFloorReflectionsSection(
                             viewModel.sendInputParameterFloat("/remoteInput/FRhighShelfSlope", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-                        sliderColor = if (isFRHighShelfEnabled) Color(0xFFFF9800) else Color.Gray,
-                        trackBackgroundColor = Color.DarkGray,
+                        sliderColor = if (isFRHighShelfEnabled) getRowColor(8) else Color.Gray,
+                        trackBackgroundColor = if (isFRHighShelfEnabled) getRowColorLight(8) else Color.DarkGray,
                         orientation = SliderOrientation.HORIZONTAL,
                         displayedValue = FRhighShelfSlopeDisplayValue,
                         isValueEditable = true,
@@ -2198,7 +2237,7 @@ private fun RenderFloorReflectionsSection(
                         },
                         dialColor = if (isFREnabled) Color.DarkGray else Color(0xFF2A2A2A),
                         indicatorColor = if (isFREnabled) Color.White else Color.Gray,
-                        trackColor = if (isFREnabled) Color(0xFF795548) else Color.DarkGray,
+                        trackColor = if (isFREnabled) getRowColor(9) else Color.DarkGray,
                         displayedValue = FRdiffusionDisplayValue,
                         valueUnit = "%",
                         isValueEditable = true,
@@ -2613,6 +2652,8 @@ private fun RenderLFOSection(
                             // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
                             viewModel.sendInputParameterInt("/remoteInput/LFOactive", inputId, 1 - index)
                         },
+                        activeColor = getRowColorActive(0),
+                        inactiveColor = getRowColorLight(0),
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
@@ -2636,7 +2677,7 @@ private fun RenderLFOSection(
                         },
                         dialColor = if (isLFOEnabled) Color.DarkGray else Color(0xFF2A2A2A),
                         indicatorColor = if (isLFOEnabled) Color.White else Color.Gray,
-                        trackColor = if (isLFOEnabled) Color(0xFF00BCD4) else Color.DarkGray,
+                        trackColor = if (isLFOEnabled) getRowColor(0) else Color.DarkGray,
                         displayedValue = LFOperiodDisplayValue,
                         valueUnit = "s",
                         isValueEditable = true,
@@ -2679,7 +2720,7 @@ private fun RenderLFOSection(
                         },
                         dialColor = if (isLFOEnabled) Color.DarkGray else Color(0xFF2A2A2A),
                         indicatorColor = if (isLFOEnabled) Color.White else Color.Gray,
-                        trackColor = if (isLFOEnabled) Color(0xFF9C27B0) else Color.DarkGray,
+                        trackColor = if (isLFOEnabled) getRowColor(0) else Color.DarkGray,
                         isValueEditable = true,
                         onDisplayedValueChange = {},
                         valueTextColor = if (isLFOEnabled) Color.White else Color.Gray,

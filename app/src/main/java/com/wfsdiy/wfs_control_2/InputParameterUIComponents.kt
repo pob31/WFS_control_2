@@ -104,8 +104,19 @@ fun ParameterTextButton(
     options: List<String>,
     onSelectionChange: (Int) -> Unit,
     enabled: Boolean = true,
+    activeColor: Color = Color(0xFF2196F3),
+    inactiveColor: Color = Color.DarkGray,
     modifier: Modifier = Modifier
 ) {
+    // Determine the button color based on the selected option
+    // For ON/OFF buttons: index 0 = ON (active color with higher opacity for better contrast),
+    // index 1 = OFF (inactive color with lower opacity)
+    val buttonColor = if (enabled) {
+        if (selectedIndex == 0) activeColor.copy(alpha = 0.75f) else inactiveColor
+    } else {
+        Color.DarkGray
+    }
+
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally
@@ -116,7 +127,7 @@ fun ParameterTextButton(
             color = if (enabled) Color.White else Color.Gray,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        
+
         Button(
             onClick = {
                 if (enabled) {
@@ -126,11 +137,12 @@ fun ParameterTextButton(
             },
             enabled = enabled,
             colors = ButtonDefaults.buttonColors(
-                containerColor = if (enabled) Color(0xFF2196F3) else Color.DarkGray,
+                containerColor = buttonColor,
                 disabledContainerColor = Color.DarkGray,
                 contentColor = Color.White,
                 disabledContentColor = Color.Gray
             ),
+            shape = RoundedCornerShape(4.dp),
             modifier = Modifier
                 .width(210.dp)
                 .height(48.dp)
@@ -312,6 +324,9 @@ fun InputChannelSelector(
     onOpenSelector: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    // Get the marker color for the selected input
+    val markerColor = getMarkerColor(selectedInputId, isClusterMarker = false)
+
     Column(modifier = modifier) {
         Text(
             text = "Input Channel",
@@ -325,7 +340,7 @@ fun InputChannelSelector(
             modifier = Modifier
                 .fillMaxWidth()
                 .height(56.dp)
-                .background(Color(0xFF2196F3), shape = RoundedCornerShape(4.dp))
+                .background(markerColor, shape = RoundedCornerShape(4.dp))
                 .clickable { onOpenSelector() }
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.CenterStart
@@ -421,12 +436,16 @@ fun InputChannelGridOverlay(
                 items(count = maxInputs) { index ->
                     val inputId = index + 1
                     val isSelected = inputId == selectedInputId
-                    
+
+                    // Get the marker color for this input
+                    val markerColor = getMarkerColor(inputId, isClusterMarker = false)
+                    val backgroundColor = if (isSelected) markerColor else markerColor.copy(alpha = 0.5f)
+
                     Box(
                         modifier = Modifier
                             .aspectRatio(1f)
                             .background(
-                                if (isSelected) Color(0xFF00BCD4) else Color(0xFF424242),
+                                backgroundColor,
                                 shape = RoundedCornerShape(8.dp)
                             )
                             .clickable { onInputSelected(inputId) },
