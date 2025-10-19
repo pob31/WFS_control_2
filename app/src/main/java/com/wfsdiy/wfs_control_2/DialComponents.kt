@@ -235,27 +235,20 @@ fun BasicDial(
                     style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
                 )
             }
-            
-            // Draw value indicator line
-            val indicatorEndX = center.x + cos(currentAngle.toRadians()) * radius
-            val indicatorEndY = center.y + sin(currentAngle.toRadians()) * radius
-            
-            drawLine(
-                color = indicatorColor,
-                start = center,
-                end = Offset(indicatorEndX, indicatorEndY),
-                strokeWidth = strokeWidth.value * 1.5f,
-                cap = StrokeCap.Round
-            )
-            
-            // Draw center dot
+
+            // Draw value indicator as a large dot on the track
+            val indicatorAngle = currentAngle.toRadians()
+            val indicatorRadius = radius - strokeWidth.value
+            val indicatorX = center.x + cos(indicatorAngle) * indicatorRadius
+            val indicatorY = center.y + sin(indicatorAngle) * indicatorRadius
+
             drawCircle(
                 color = indicatorColor,
-                radius = strokeWidth.value / 2f,
-                center = center
+                radius = strokeWidth.value * 1.5f,
+                center = Offset(indicatorX, indicatorY)
             )
         }
-        
+
         // Show value text at bottom in dead zone
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-dialSize * 0.15f)),
@@ -442,27 +435,20 @@ fun RotaryKnob(
                     style = Stroke(width = strokeWidth.value * 4f, cap = StrokeCap.Round)
                 )
             }
-            
-            // Draw value indicator line
-            val indicatorEndX = center.x + cos(currentAngle.toRadians()) * radius
-            val indicatorEndY = center.y + sin(currentAngle.toRadians()) * radius
-            
-            drawLine(
-                color = indicatorColor,
-                start = center,
-                end = Offset(indicatorEndX, indicatorEndY),
-                strokeWidth = strokeWidth.value * 1.5f,
-                cap = StrokeCap.Round
-            )
-            
-            // Draw center dot
+
+            // Draw value indicator as a large dot on the track
+            val indicatorAngle = currentAngle.toRadians()
+            val indicatorRadius = radius - strokeWidth.value
+            val indicatorX = center.x + cos(indicatorAngle) * indicatorRadius
+            val indicatorY = center.y + sin(indicatorAngle) * indicatorRadius
+
             drawCircle(
                 color = indicatorColor,
-                radius = strokeWidth.value / 2f,
-                center = center
+                radius = strokeWidth.value * 1.5f,
+                center = Offset(indicatorX, indicatorY)
             )
         }
-        
+
         // Show value text at bottom in dead zone
         Box(
             modifier = Modifier.align(Alignment.BottomCenter).offset(y = (-knobSize * 0.15f)),
@@ -626,15 +612,8 @@ fun AngleDial(
                 radius = strokeWidth.value * 1.5f,
                 center = Offset(indicatorX, indicatorY)
             )
-            
-            // Draw center dot
-            drawCircle(
-                color = indicatorColor,
-                radius = strokeWidth.value / 2f,
-                center = center
-            )
         }
-        
+
         // Show value text at center
         Box(
             modifier = Modifier.align(Alignment.Center),
