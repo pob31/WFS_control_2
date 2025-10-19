@@ -676,19 +676,17 @@ private fun RenderInputSection(
         commonAttenDisplayValue = actualValue.toInt().toString()
     }
 
-    // Third Row with 10% padding: Max Speed | Height Factor | Attenuation Law/Distance | Common Attenuation
+    Spacer(modifier = Modifier.height(spacing.largeSpacing))
+
+    // Third Row with 10% padding: Buttons (Max Speed Active | empty | Attenuation Law | empty)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f),
         horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
     ) {
-        // Cell 1: Max Speed Active button above Max Speed dial
-        Column(
-            modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Bottom,
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
+        // Cell 1: Max Speed Active button
+        Column(modifier = Modifier.weight(1f)) {
             ParameterTextButton(
                 label = "Max Speed Active",
                 selectedIndex = maxSpeedActiveIndex,
@@ -704,7 +702,49 @@ private fun RenderInputSection(
                 },
                 modifier = Modifier.fillMaxWidth()
             )
-            Spacer(modifier = Modifier.height(spacing.smallSpacing))
+        }
+
+        // Cell 2: Empty (Height Factor has no button)
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Cell 3: Attenuation Law button
+        Column(modifier = Modifier.weight(1f)) {
+            ParameterTextButton(
+                label = "Attenuation Law",
+                selectedIndex = attenuationLawIndex,
+                options = listOf("Log", "1/d²"),
+                onSelectionChange = { index ->
+                    attenuationLawIndex = index
+                    selectedChannel.setParameter("attenuationLaw", InputParameterValue(
+                        normalizedValue = index.toFloat(),
+                        stringValue = "",
+                        displayValue = listOf("Log", "1/d²")[index]
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Cell 4: Empty (Common Attenuation has no button)
+        Spacer(modifier = Modifier.weight(1f))
+    }
+
+    Spacer(modifier = Modifier.height(spacing.smallSpacing))
+
+    // Fourth Row with 10% padding: All dials (Max Speed | Height Factor | Distance Atten/Ratio | Common Atten)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f),
+        horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        // Cell 1: Max Speed dial
+        Column(
+            modifier = Modifier.weight(1f),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
             Text(
                 "Max Speed",
                 fontSize = 12.sp,
@@ -755,7 +795,6 @@ private fun RenderInputSection(
         // Cell 2: Height Factor dial
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Height Factor", fontSize = 12.sp, color = Color.White)
@@ -801,29 +840,11 @@ private fun RenderInputSection(
             )
         }
 
-        // Cell 3: Attenuation Law button above Distance Attenuation/Distance Ratio dial
+        // Cell 3: Distance Attenuation or Distance Ratio dial (conditional)
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            ParameterTextButton(
-                label = "Attenuation Law",
-                selectedIndex = attenuationLawIndex,
-                options = listOf("Log", "1/d²"),
-                onSelectionChange = { index ->
-                    attenuationLawIndex = index
-                    selectedChannel.setParameter("attenuationLaw", InputParameterValue(
-                        normalizedValue = index.toFloat(),
-                        stringValue = "",
-                        displayValue = listOf("Log", "1/d²")[index]
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
-                },
-                modifier = Modifier.fillMaxWidth()
-            )
-            Spacer(modifier = Modifier.height(spacing.smallSpacing))
-
             // Distance Attenuation (visible if attenuationLawIndex == 0)
             if (attenuationLawIndex == 0) {
                 Text("Distance Attenuation", fontSize = 12.sp, color = Color.White)
@@ -918,7 +939,6 @@ private fun RenderInputSection(
         // Cell 4: Common Attenuation dial
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.Bottom,
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text("Common Attenuation", fontSize = 12.sp, color = Color.White)
