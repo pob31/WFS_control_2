@@ -715,15 +715,15 @@ private fun RenderInputSection(
         // Cell 1: Max Speed Active button
         Column(modifier = Modifier.weight(1f)) {
             ParameterTextButton(
-                label = "Max Speed Active",
+                label = "",
                 selectedIndex = maxSpeedActiveIndex,
-                options = listOf("ON", "OFF"),
+                options = listOf("Max Speed Limited", "Max Speed Unlimited"),
                 onSelectionChange = { index ->
                     maxSpeedActiveIndex = index
                     selectedChannel.setParameter("maxSpeedActive", InputParameterValue(
                         normalizedValue = index.toFloat(),
                         stringValue = "",
-                        displayValue = listOf("ON", "OFF")[index]
+                        displayValue = listOf("Max Speed Limited", "Max Speed Unlimited")[index]
                     ))
                     viewModel.sendInputParameterInt("/remoteInput/maxSpeedActive", inputId, 1 - index)
                 },
@@ -739,15 +739,15 @@ private fun RenderInputSection(
         // Cell 3: Attenuation Law button
         Column(modifier = Modifier.weight(1f)) {
             ParameterTextButton(
-                label = "Attenuation Law",
+                label = "",
                 selectedIndex = attenuationLawIndex,
-                options = listOf("Log", "1/d²"),
+                options = listOf("Attenuation Law: Log", "Attenuation Law: 1/d²"),
                 onSelectionChange = { index ->
                     attenuationLawIndex = index
                     selectedChannel.setParameter("attenuationLaw", InputParameterValue(
                         normalizedValue = index.toFloat(),
                         stringValue = "",
-                        displayValue = listOf("Log", "1/d²")[index]
+                        displayValue = listOf("Attenuation Law: Log", "Attenuation Law: 1/d²")[index]
                     ))
                     viewModel.sendInputParameterInt("/remoteInput/attenuationLaw", inputId, index)
                 },
@@ -1436,15 +1436,15 @@ private fun RenderLiveSourceSection(
                 // Active
                 Column(modifier = Modifier.weight(1f)) {
                     ParameterTextButton(
-                        label = "Active",
+                        label = "",
                         selectedIndex = liveSourceActiveIndex,
-                        options = listOf("ON", "OFF"),
+                        options = listOf("Enabled", "Disabled"),
                         onSelectionChange = { index ->
                             liveSourceActiveIndex = index
                             selectedChannel.setParameter("liveSourceActive", InputParameterValue(
                                 normalizedValue = index.toFloat(),
                                 stringValue = "",
-                                displayValue = listOf("ON", "OFF")[index]
+                                displayValue = listOf("Enabled", "Disabled")[index]
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/liveSourceActive", inputId, 1 - index)
                         },
@@ -1920,15 +1920,15 @@ private fun RenderFloorReflectionsSection(
                 // Active
                 Column(modifier = Modifier.weight(1f)) {
                     ParameterTextButton(
-                        label = "Active",
+                        label = "",
                         selectedIndex = FRactiveIndex,
-                        options = listOf("ON", "OFF"),
+                        options = listOf("Enabled", "Disabled"),
                         onSelectionChange = { index ->
                             FRactiveIndex = index
                             selectedChannel.setParameter("FRactive", InputParameterValue(
                                 normalizedValue = index.toFloat(),
                                 stringValue = "",
-                                displayValue = listOf("ON", "OFF")[index]
+                                displayValue = listOf("Enabled", "Disabled")[index]
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRactive", inputId, 1 - index)
                         },
@@ -1985,15 +1985,15 @@ private fun RenderFloorReflectionsSection(
                 // Low Cut Active
                 Column(modifier = Modifier.weight(1f)) {
                     ParameterTextButton(
-                        label = "Low Cut Active",
+                        label = "",
                         selectedIndex = FRlowCutActiveIndex,
-                        options = listOf("ON", "OFF"),
+                        options = listOf("Low Cut Enabled", "Low Cut Disabled"),
                         onSelectionChange = { index ->
                             FRlowCutActiveIndex = index
                             selectedChannel.setParameter("FRlowCutActive", InputParameterValue(
                                 normalizedValue = index.toFloat(),
                                 stringValue = "",
-                                displayValue = listOf("ON", "OFF")[index]
+                                displayValue = listOf("Low Cut Enabled", "Low Cut Disabled")[index]
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRlowCutActive", inputId, 1 - index)
                         },
@@ -2060,15 +2060,15 @@ private fun RenderFloorReflectionsSection(
                 // High Shelf Active
                 Column(modifier = Modifier.weight(1f)) {
                     ParameterTextButton(
-                        label = "High Shelf Active",
+                        label = "",
                         selectedIndex = FRhighShelfActiveIndex,
-                        options = listOf("ON", "OFF"),
+                        options = listOf("High Shelf Enabled", "High Shelf Disabled"),
                         onSelectionChange = { index ->
                             FRhighShelfActiveIndex = index
                             selectedChannel.setParameter("FRhighShelfActive", InputParameterValue(
                                 normalizedValue = index.toFloat(),
                                 stringValue = "",
-                                displayValue = listOf("ON", "OFF")[index]
+                                displayValue = listOf("High Shelf Enabled", "High Shelf Disabled")[index]
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/FRhighShelfActive", inputId, 1 - index)
                         },
@@ -2639,15 +2639,15 @@ private fun RenderLFOSection(
                 // Active
                 Column(modifier = Modifier.weight(1f)) {
                     ParameterTextButton(
-                        label = "Active",
+                        label = "",
                         selectedIndex = LFOactiveIndex,
-                        options = listOf("ON", "OFF"),
+                        options = listOf("Enabled", "Disabled"),
                         onSelectionChange = { index ->
                             LFOactiveIndex = index
                             selectedChannel.setParameter("LFOactive", InputParameterValue(
                                 normalizedValue = index.toFloat(),
                                 stringValue = "",
-                                displayValue = listOf("ON", "OFF")[index]
+                                displayValue = listOf("Enabled", "Disabled")[index]
                             ))
                             // Invert for OSC: UI index 0 (ON) -> OSC 1, UI index 1 (OFF) -> OSC 0
                             viewModel.sendInputParameterInt("/remoteInput/LFOactive", inputId, 1 - index)
