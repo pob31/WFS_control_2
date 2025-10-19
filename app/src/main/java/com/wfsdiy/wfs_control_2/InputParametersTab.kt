@@ -131,9 +131,7 @@ fun InputParametersTab(
             spacing = spacing
         )
         
-        // Directivity Group
-        ParameterSectionHeader(title = "Directivity")
-        
+        // Directivity Group (now has its own collapsible header)
         RenderDirectivitySection(
             selectedChannel = selectedChannel,
             viewModel = viewModel,
@@ -141,7 +139,8 @@ fun InputParametersTab(
             horizontalSliderHeight = horizontalSliderHeight,
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
-            spacing = spacing
+            spacing = spacing,
+            screenWidthDp = screenWidthDp
         )
         
         // Live Source Attenuation Group (now has its own collapsible header)
@@ -960,10 +959,12 @@ private fun RenderDirectivitySection(
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
-    spacing: ResponsiveSpacing
+    spacing: ResponsiveSpacing,
+    screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    
+    var isExpanded by remember { mutableStateOf(false) }
+
     // Directivity (Width Expansion Slider - grows from center)
     val directivity = selectedChannel.getParameter("directivity")
     var directivityValue by remember { mutableFloatStateOf(0f) } // 0-1 where it expands from center
@@ -976,53 +977,7 @@ private fun RenderDirectivitySection(
         directivityValue = (actualValue - 2f) / 358f
         directivityDisplayValue = actualValue.toInt().toString()
     }
-    
-    Column {
-        Text("Directivity", fontSize = 12.sp, color = Color.White)
-        WidthExpansionSlider(
-            value = directivityValue,
-            onValueChange = { newValue ->
-                directivityValue = newValue
-                // Map 0-1 expansion to 2-360 degrees
-                val actualValue = 2f + (newValue * 358f)
-                directivityDisplayValue = actualValue.toInt().toString()
-                val normalized = (actualValue - 2f) / 358f
-                selectedChannel.setParameter("directivity", InputParameterValue(
-                    normalizedValue = normalized,
-                    stringValue = "",
-                    displayValue = "${actualValue.toInt()}°"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/directivity", inputId, actualValue.toInt())
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = Color(0xFF9C27B0),
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            displayedValue = directivityDisplayValue,
-            isValueEditable = true,
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    // Round to nearest integer
-                    val roundedValue = value.roundToInt().toFloat()
-                    val coercedValue = roundedValue.coerceIn(2f, 360f)
-                    val expansionValue = (coercedValue - 2f) / 358f
-                    directivityValue = expansionValue
-                    directivityDisplayValue = coercedValue.toInt().toString()
-                    selectedChannel.setParameter("directivity", InputParameterValue(
-                        normalizedValue = expansionValue,
-                        stringValue = "",
-                        displayValue = "${coercedValue.toInt()}°"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/directivity", inputId, coercedValue.toInt())
-                }
-            },
-            valueUnit = "°",
-            valueTextColor = Color.White
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Rotation
     val rotation = selectedChannel.getParameter("rotation")
     var rotationValue by remember { mutableStateOf((rotation.normalizedValue * 360f) - 180f) }
@@ -1030,34 +985,7 @@ private fun RenderDirectivitySection(
     LaunchedEffect(inputId, rotation.normalizedValue) {
         rotationValue = (rotation.normalizedValue * 360f) - 180f
     }
-    
-    Column {
-        Text("Rotation", fontSize = 12.sp, color = Color.White)
-        AngleDial(
-            value = rotationValue,
-            onValueChange = { newValue ->
-                // Clamp to -180 to 180 using ((x+540)%360)-180
-                val clamped = ((newValue + 540f) % 360f) - 180f
-                rotationValue = clamped
-                selectedChannel.setParameter("rotation", InputParameterValue(
-                    normalizedValue = (clamped + 180f) / 360f,
-                    stringValue = "",
-                    displayValue = "${clamped.toInt()}°"
-                ))
-                viewModel.sendInputParameterInt("/remoteInput/rotation", inputId, clamped.toInt())
-            },
-            dialColor = Color.DarkGray,
-            indicatorColor = Color.White,
-            trackColor = Color(0xFF4CAF50),
-            isValueEditable = true,
-            onDisplayedValueChange = {},
-            valueTextColor = Color.White,
-            enabled = true
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // Tilt
     val tilt = selectedChannel.getParameter("tilt")
     var tiltValue by remember { mutableFloatStateOf(0f) } // -90 to 90 range directly
@@ -1069,58 +997,7 @@ private fun RenderDirectivitySection(
         tiltValue = actualValue
         tiltDisplayValue = actualValue.toInt().toString()
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("Tilt", fontSize = 12.sp, color = Color.White)
-            BidirectionalSlider(
-                value = tiltValue,
-                onValueChange = { newValue ->
-                    tiltValue = newValue
-                    tiltDisplayValue = newValue.toInt().toString()
-                    val normalized = (newValue + 90f) / 180f
-                    selectedChannel.setParameter("tilt", InputParameterValue(
-                        normalizedValue = normalized,
-                        stringValue = "",
-                        displayValue = "${newValue.toInt()}°"
-                    ))
-                    viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, newValue.toInt())
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = Color(0xFFFF5722),
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                valueRange = -90f..90f,
-                displayedValue = tiltDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        // Round to nearest integer
-                        val roundedValue = value.roundToInt().toFloat()
-                        val coercedValue = roundedValue.coerceIn(-90f, 90f)
-                        tiltValue = coercedValue
-                        tiltDisplayValue = coercedValue.toInt().toString()
-                        val normalized = (coercedValue + 90f) / 180f
-                        selectedChannel.setParameter("tilt", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${coercedValue.toInt()}°"
-                        ))
-                        viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, coercedValue.toInt())
-                    }
-                },
-                valueUnit = "°",
-                valueTextColor = Color.White
-            )
-        }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
+
     // HF Shelf
     val HFshelf = selectedChannel.getParameter("HFshelf")
     var HFshelfValue by remember { mutableStateOf(HFshelf.normalizedValue) }
@@ -1132,52 +1009,208 @@ private fun RenderDirectivitySection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, HFshelf.normalizedValue)
         HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
+
+    // Collapsible Header
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { isExpanded = !isExpanded }
+            .padding(
+                start = screenWidthDp * 0.1f,
+                end = screenWidthDp * 0.1f,
+                top = spacing.smallSpacing,
+                bottom = spacing.smallSpacing
+            ),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("HF Shelf", fontSize = 12.sp, color = Color.White)
-            StandardSlider(
-                value = HFshelfValue,
-                onValueChange = { newValue ->
-                    HFshelfValue = newValue
-                    val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
-                    val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
-                    HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                    selectedChannel.setParameter("HFshelf", InputParameterValue(
-                        normalizedValue = newValue,
-                        stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
-                    ))
-                    viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, actualValue)
-                },
-                modifier = Modifier.height(verticalSliderHeight),
-                sliderColor = Color(0xFF00BCD4),
-                trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
-                displayedValue = HFshelfDisplayValue,
-                isValueEditable = true,
-                onDisplayedValueChange = { /* Typing handled internally */ },
-                onValueCommit = { committedValue ->
-                    committedValue.toFloatOrNull()?.let { value ->
-                        val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
-                        val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
-                        val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
-                        HFshelfValue = normalized
-                        HFshelfDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                        selectedChannel.setParameter("HFshelf", InputParameterValue(
-                            normalizedValue = normalized,
-                            stringValue = "",
-                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
-                        ))
-                        viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, coercedValue)
-                    }
-                },
-                valueUnit = "dB",
-                valueTextColor = Color.White
-            )
+        Text(
+            text = "Directivity",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color(0xFF00BCD4)
+        )
+        Text(
+            text = if (isExpanded) "▼" else "▶",
+            fontSize = 16.sp,
+            color = Color(0xFF00BCD4)
+        )
+    }
+
+    // Collapsible content
+    if (isExpanded) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f)
+        ) {
+            // Single Row: Directivity | Rotation | Tilt | HF Shelf
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Directivity
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Directivity", fontSize = 12.sp, color = Color.White)
+                    WidthExpansionSlider(
+                        value = directivityValue,
+                        onValueChange = { newValue ->
+                            directivityValue = newValue
+                            // Map 0-1 expansion to 2-360 degrees
+                            val actualValue = 2f + (newValue * 358f)
+                            directivityDisplayValue = actualValue.toInt().toString()
+                            val normalized = (actualValue - 2f) / 358f
+                            selectedChannel.setParameter("directivity", InputParameterValue(
+                                normalizedValue = normalized,
+                                stringValue = "",
+                                displayValue = "${actualValue.toInt()}°"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/directivity", inputId, actualValue.toInt())
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = Color(0xFF9C27B0),
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = directivityDisplayValue,
+                        isValueEditable = true,
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                // Round to nearest integer
+                                val roundedValue = value.roundToInt().toFloat()
+                                val coercedValue = roundedValue.coerceIn(2f, 360f)
+                                val expansionValue = (coercedValue - 2f) / 358f
+                                directivityValue = expansionValue
+                                directivityDisplayValue = coercedValue.toInt().toString()
+                                selectedChannel.setParameter("directivity", InputParameterValue(
+                                    normalizedValue = expansionValue,
+                                    stringValue = "",
+                                    displayValue = "${coercedValue.toInt()}°"
+                                ))
+                                viewModel.sendInputParameterInt("/remoteInput/directivity", inputId, coercedValue.toInt())
+                            }
+                        },
+                        valueUnit = "°",
+                        valueTextColor = Color.White
+                    )
+                }
+
+                // Rotation
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Rotation", fontSize = 12.sp, color = Color.White)
+                    AngleDial(
+                        value = rotationValue,
+                        onValueChange = { newValue ->
+                            // Clamp to -180 to 180 using ((x+540)%360)-180
+                            val clamped = ((newValue + 540f) % 360f) - 180f
+                            rotationValue = clamped
+                            selectedChannel.setParameter("rotation", InputParameterValue(
+                                normalizedValue = (clamped + 180f) / 360f,
+                                stringValue = "",
+                                displayValue = "${clamped.toInt()}°"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/rotation", inputId, clamped.toInt())
+                        },
+                        dialColor = Color.DarkGray,
+                        indicatorColor = Color.White,
+                        trackColor = Color(0xFF4CAF50),
+                        isValueEditable = true,
+                        onDisplayedValueChange = {},
+                        valueTextColor = Color.White,
+                        enabled = true,
+                        sizeMultiplier = 0.7f
+                    )
+                }
+
+                // Tilt
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("Tilt", fontSize = 12.sp, color = Color.White)
+                    BidirectionalSlider(
+                        value = tiltValue,
+                        onValueChange = { newValue ->
+                            tiltValue = newValue
+                            tiltDisplayValue = newValue.toInt().toString()
+                            val normalized = (newValue + 90f) / 180f
+                            selectedChannel.setParameter("tilt", InputParameterValue(
+                                normalizedValue = normalized,
+                                stringValue = "",
+                                displayValue = "${newValue.toInt()}°"
+                            ))
+                            viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, newValue.toInt())
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = Color(0xFFFF5722),
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        valueRange = -90f..90f,
+                        displayedValue = tiltDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                // Round to nearest integer
+                                val roundedValue = value.roundToInt().toFloat()
+                                val coercedValue = roundedValue.coerceIn(-90f, 90f)
+                                tiltValue = coercedValue
+                                tiltDisplayValue = coercedValue.toInt().toString()
+                                val normalized = (coercedValue + 90f) / 180f
+                                selectedChannel.setParameter("tilt", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${coercedValue.toInt()}°"
+                                ))
+                                viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, coercedValue.toInt())
+                            }
+                        },
+                        valueUnit = "°",
+                        valueTextColor = Color.White
+                    )
+                }
+
+                // HF Shelf
+                Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text("HF Shelf", fontSize = 12.sp, color = Color.White)
+                    StandardSlider(
+                        value = HFshelfValue,
+                        onValueChange = { newValue ->
+                            HFshelfValue = newValue
+                            val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
+                            val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
+                            HFshelfDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+                            selectedChannel.setParameter("HFshelf", InputParameterValue(
+                                normalizedValue = newValue,
+                                stringValue = "",
+                                displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
+                            ))
+                            viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, actualValue)
+                        },
+                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        sliderColor = Color(0xFF00BCD4),
+                        trackBackgroundColor = Color.DarkGray,
+                        orientation = SliderOrientation.HORIZONTAL,
+                        displayedValue = HFshelfDisplayValue,
+                        isValueEditable = true,
+                        onDisplayedValueChange = { /* Typing handled internally */ },
+                        onValueCommit = { committedValue ->
+                            committedValue.toFloatOrNull()?.let { value ->
+                                val definition = InputParameterDefinitions.parametersByVariableName["HFshelf"]!!
+                                val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
+                                val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
+                                HFshelfValue = normalized
+                                HFshelfDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                                selectedChannel.setParameter("HFshelf", InputParameterValue(
+                                    normalizedValue = normalized,
+                                    stringValue = "",
+                                    displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
+                                ))
+                                viewModel.sendInputParameterFloat("/remoteInput/HFshelf", inputId, coercedValue)
+                            }
+                        },
+                        valueUnit = "dB",
+                        valueTextColor = Color.White
+                    )
+                }
+            }
         }
     }
 }
