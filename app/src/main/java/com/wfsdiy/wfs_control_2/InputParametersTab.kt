@@ -1138,10 +1138,10 @@ private fun RenderDirectivitySection(
                             ))
                             viewModel.sendInputParameterInt("/remoteInput/tilt", inputId, newValue.toInt())
                         },
-                        modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                        modifier = Modifier.height(verticalSliderHeight),
                         sliderColor = Color(0xFFFF5722),
                         trackBackgroundColor = Color.DarkGray,
-                        orientation = SliderOrientation.HORIZONTAL,
+                        orientation = SliderOrientation.VERTICAL,
                         valueRange = -90f..90f,
                         displayedValue = tiltDisplayValue,
                         isValueEditable = true,
