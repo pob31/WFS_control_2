@@ -13,6 +13,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
@@ -99,102 +100,67 @@ fun InputParametersTab(
     var isLFOExpanded by remember { mutableStateOf(false) }
 
     val coroutineScope = rememberCoroutineScope()
+    val scrollState = rememberScrollState()
+
+    // Track which shortcut button was recently clicked for temporary highlight
+    var recentlyClickedShortcut by remember { mutableStateOf<String?>(null) }
 
     Box(modifier = Modifier.fillMaxSize()) {
+        // Main content column
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(spacing.padding)
         ) {
-            // Fixed header with Input Channel selector, Input Name, and Section Shortcuts
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(
-                        start = screenWidthDp * 0.1f,
-                        end = screenWidthDp * 0.1f,
-                        bottom = spacing.largeSpacing
-                    )
-            ) {
-                // First row: Input Channel selector (30%) and Input Name (60%)
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+                // Fixed header with Input Channel selector and Input Name
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            start = screenWidthDp * 0.1f,
+                            end = screenWidthDp * 0.1f,
+                            bottom = spacing.largeSpacing
+                        )
                 ) {
-                    // Input Channel Selector - 30%
-                    InputChannelSelector(
-                        selectedInputId = inputParametersState.selectedInputId,
-                        maxInputs = numberOfInputs,
-                        onInputSelected = { inputId ->
-                            viewModel.setSelectedInput(inputId)
-                            viewModel.requestInputParameters(inputId)
-                        },
-                        onOpenSelector = { showGridOverlay = true },
-                        modifier = Modifier.weight(0.3f)
-                    )
+                    // Row: Input Channel selector (30%) and Input Name (60%)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+                    ) {
+                        // Input Channel Selector - 30%
+                        InputChannelSelector(
+                            selectedInputId = inputParametersState.selectedInputId,
+                            maxInputs = numberOfInputs,
+                            onInputSelected = { inputId ->
+                                viewModel.setSelectedInput(inputId)
+                                viewModel.requestInputParameters(inputId)
+                            },
+                            onOpenSelector = { showGridOverlay = true },
+                            modifier = Modifier.weight(0.3f)
+                        )
 
-                    // Input Name - 60%
-                    ParameterTextBox(
-                        label = "Input Name",
-                        value = inputNameValue,
-                        onValueChange = { newValue ->
-                            inputNameValue = newValue
-                        },
-                        onValueCommit = { committedValue ->
-                            selectedChannel.setParameter("inputName", InputParameterValue(
-                                normalizedValue = 0f,
-                                stringValue = committedValue,
-                                displayValue = committedValue
-                            ))
-                            viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
-                        },
-                        height = 56.dp,
-                        modifier = Modifier.weight(0.6f)
-                    )
+                        // Input Name - 60%
+                        ParameterTextBox(
+                            label = "Input Name",
+                            value = inputNameValue,
+                            onValueChange = { newValue ->
+                                inputNameValue = newValue
+                            },
+                            onValueCommit = { committedValue ->
+                                selectedChannel.setParameter("inputName", InputParameterValue(
+                                    normalizedValue = 0f,
+                                    stringValue = committedValue,
+                                    displayValue = committedValue
+                                ))
+                                viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
+                            },
+                            height = 56.dp,
+                            modifier = Modifier.weight(0.6f)
+                        )
+                    }
                 }
-
-                Spacer(modifier = Modifier.height(spacing.smallSpacing))
-
-                // Second row: Section shortcut buttons
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    SectionShortcutButton(
-                        text = "Dir",
-                        isExpanded = isDirectivityExpanded,
-                        onClick = { isDirectivityExpanded = !isDirectivityExpanded },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SectionShortcutButton(
-                        text = "Live",
-                        isExpanded = isLiveSourceExpanded,
-                        onClick = { isLiveSourceExpanded = !isLiveSourceExpanded },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SectionShortcutButton(
-                        text = "Floor",
-                        isExpanded = isFloorReflectionsExpanded,
-                        onClick = { isFloorReflectionsExpanded = !isFloorReflectionsExpanded },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SectionShortcutButton(
-                        text = "Jitter",
-                        isExpanded = isJitterExpanded,
-                        onClick = { isJitterExpanded = !isJitterExpanded },
-                        modifier = Modifier.weight(1f)
-                    )
-                    SectionShortcutButton(
-                        text = "LFO",
-                        isExpanded = isLFOExpanded,
-                        onClick = { isLFOExpanded = !isLFOExpanded },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
 
             // Scrollable content
-            val scrollState = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -292,6 +258,74 @@ fun InputParametersTab(
             scrollState = scrollState,
             coroutineScope = coroutineScope
         )
+            }
+        }
+
+        // Bottom-right stacked section shortcuts
+        Column(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(bottom = 16.dp, end = 8.dp)
+                .width(screenWidthDp * 0.096f),
+            verticalArrangement = Arrangement.spacedBy(4.dp)
+        ) {
+            HorizontalSectionShortcutButton(
+                text = "Scroll to the Top",
+                isHighlighted = recentlyClickedShortcut == "Top",
+                onClick = {
+                    coroutineScope.launch {
+                        scrollState.animateScrollTo(0)
+                    }
+                    recentlyClickedShortcut = "Top"
+                }
+            )
+            HorizontalSectionShortcutButton(
+                text = "Directivity",
+                isHighlighted = recentlyClickedShortcut == "Directivity",
+                onClick = {
+                    isDirectivityExpanded = true
+                    recentlyClickedShortcut = "Directivity"
+                }
+            )
+            HorizontalSectionShortcutButton(
+                text = "Live Source Attenuation",
+                isHighlighted = recentlyClickedShortcut == "Live Source Attenuation",
+                onClick = {
+                    isLiveSourceExpanded = true
+                    recentlyClickedShortcut = "Live Source Attenuation"
+                }
+            )
+            HorizontalSectionShortcutButton(
+                text = "Floor Reflections",
+                isHighlighted = recentlyClickedShortcut == "Floor Reflections",
+                onClick = {
+                    isFloorReflectionsExpanded = true
+                    recentlyClickedShortcut = "Floor Reflections"
+                }
+            )
+            HorizontalSectionShortcutButton(
+                text = "Jitter",
+                isHighlighted = recentlyClickedShortcut == "Jitter",
+                onClick = {
+                    isJitterExpanded = true
+                    recentlyClickedShortcut = "Jitter"
+                }
+            )
+            HorizontalSectionShortcutButton(
+                text = "LFO",
+                isHighlighted = recentlyClickedShortcut == "LFO",
+                onClick = {
+                    isLFOExpanded = true
+                    recentlyClickedShortcut = "LFO"
+                }
+            )
+        }
+
+        // Clear shortcut highlight after 1 second
+        LaunchedEffect(recentlyClickedShortcut) {
+            if (recentlyClickedShortcut != null) {
+                kotlinx.coroutines.delay(1000)
+                recentlyClickedShortcut = null
             }
         }
 
@@ -618,6 +652,8 @@ private fun RenderInputSection(
                 modifier = Modifier
                     .size(150.dp)
                     .padding(start = verticalSliderWidth * 2),
+                outerCircleColor = getRowColor(1).copy(alpha = 0.3f),   // Inactive track color
+                innerThumbColor = getRowColor(1).copy(alpha = 0.75f), // Active track color (brownish)
                 onPositionChanged = { x, y ->
                     // x and y are in range -1 to 1
                     // Speed: 10 units per second, joystick reports every 100ms
@@ -3452,6 +3488,37 @@ private fun SectionShortcutButton(
             text = text,
             fontSize = 12.sp,
             fontWeight = if (isExpanded) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
+
+/**
+ * Horizontal section shortcut button for bottom-right stack
+ */
+@Composable
+private fun HorizontalSectionShortcutButton(
+    text: String,
+    isHighlighted: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isHighlighted) Color(0xFF00BCD4) else Color(0xFF424242),
+            contentColor = Color.White
+        ),
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier
+            .fillMaxWidth()
+            .height(32.dp),
+        contentPadding = PaddingValues(horizontal = 6.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 10.sp,
+            fontWeight = if (isHighlighted) FontWeight.Bold else FontWeight.Normal,
+            maxLines = 1
         )
     }
 }
