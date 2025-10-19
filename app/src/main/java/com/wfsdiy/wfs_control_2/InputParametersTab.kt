@@ -23,48 +23,97 @@ fun InputParametersTab(
 ) {
     val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    
+
     // Observe the input parameters state
     val inputParametersState by viewModel.inputParametersState.collectAsState()
     val numberOfInputs by viewModel.numberOfInputs.collectAsState()
-    
+
     val selectedChannel = inputParametersState.getSelectedChannel()
-    
+    val inputId by rememberUpdatedState(selectedChannel.inputId)
+
     // Calculate responsive dimensions
     val screenWidthDp = configuration.screenWidthDp.dp
     val screenHeightDp = configuration.screenHeightDp.dp
     val screenDensity = density.density
-    
+
     // Get responsive text sizes and spacing
     val textSizes = getResponsiveTextSizes()
     val spacing = getResponsiveSpacing()
-    
+
     // Responsive slider dimensions
     val horizontalSliderWidth = (screenWidthDp * 0.8f).coerceAtLeast(200.dp)
     val horizontalSliderHeight = (40.dp * screenDensity).coerceIn(30.dp, 60.dp)
     val verticalSliderWidth = (40.dp * screenDensity).coerceIn(30.dp, 60.dp)
     val verticalSliderHeight = (150.dp * screenDensity).coerceIn(120.dp, 250.dp)
-    
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(spacing.padding)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
-    ) {
-        // Input Channel Selector
-        InputChannelSelector(
-            selectedInputId = inputParametersState.selectedInputId,
-            maxInputs = numberOfInputs,
-            onInputSelected = { inputId ->
-                viewModel.setSelectedInput(inputId)
-                viewModel.requestInputParameters(inputId)
-            },
+
+    // State for showing grid overlay
+    var showGridOverlay by remember { mutableStateOf(false) }
+
+    // Input Name state
+    val inputName = selectedChannel.getParameter("inputName")
+    var inputNameValue by remember { mutableStateOf(inputName.stringValue) }
+
+    LaunchedEffect(inputId, inputName.stringValue) {
+        inputNameValue = inputName.stringValue
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(bottom = spacing.largeSpacing)
-        )
+                .fillMaxSize()
+                .padding(spacing.padding)
+        ) {
+            // Fixed header with Input Channel selector and Input Name
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        start = screenWidthDp * 0.1f,
+                        end = screenWidthDp * 0.1f,
+                        bottom = spacing.largeSpacing
+                    ),
+                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+            ) {
+                // Input Channel Selector
+                InputChannelSelector(
+                    selectedInputId = inputParametersState.selectedInputId,
+                    maxInputs = numberOfInputs,
+                    onInputSelected = { inputId ->
+                        viewModel.setSelectedInput(inputId)
+                        viewModel.requestInputParameters(inputId)
+                    },
+                    onOpenSelector = { showGridOverlay = true },
+                    modifier = Modifier.weight(1f)
+                )
+
+                // Input Name
+                ParameterTextBox(
+                    label = "Input Name",
+                    value = inputNameValue,
+                    onValueChange = { newValue ->
+                        inputNameValue = newValue
+                    },
+                    onValueCommit = { committedValue ->
+                        selectedChannel.setParameter("inputName", InputParameterValue(
+                            normalizedValue = 0f,
+                            stringValue = committedValue,
+                            displayValue = committedValue
+                        ))
+                        viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
+                    },
+                    height = 56.dp,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // Scrollable content
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState()),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+            ) {
         
         // Input Group
         ParameterSectionHeader(title = "Input")
@@ -141,6 +190,22 @@ fun InputParametersTab(
             verticalSliderHeight = verticalSliderHeight,
             spacing = spacing
         )
+            }
+        }
+
+        // Grid overlay at Box level so it appears on top of everything
+        if (showGridOverlay) {
+            InputChannelGridOverlay(
+                selectedInputId = inputParametersState.selectedInputId,
+                maxInputs = numberOfInputs,
+                onInputSelected = { inputId ->
+                    viewModel.setSelectedInput(inputId)
+                    viewModel.requestInputParameters(inputId)
+                    showGridOverlay = false
+                },
+                onDismiss = { showGridOverlay = false }
+            )
+        }
     }
 }
 
@@ -155,34 +220,7 @@ private fun RenderInputSection(
     spacing: ResponsiveSpacing
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    
-    // Input Name
-    val inputName = selectedChannel.getParameter("inputName")
-    var inputNameValue by remember { mutableStateOf(inputName.stringValue) }
 
-    LaunchedEffect(inputId, inputName.stringValue) {
-        inputNameValue = inputName.stringValue
-    }
-    
-    ParameterTextBox(
-        label = "Input Name",
-        value = inputNameValue,
-        onValueChange = { newValue ->
-            inputNameValue = newValue
-        },
-        onValueCommit = { committedValue ->
-            selectedChannel.setParameter("inputName", InputParameterValue(
-                normalizedValue = 0f,
-                stringValue = committedValue,
-                displayValue = committedValue
-            ))
-            viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
     // Attenuation
     val attenuation = selectedChannel.getParameter("attenuation")
     var attenuationValue by remember { mutableStateOf(attenuation.normalizedValue) }

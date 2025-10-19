@@ -244,11 +244,12 @@ fun ParameterTextBox(
     enabled: Boolean = true,
     maxLength: Int = 24,
     modifier: Modifier = Modifier,
-    onValueCommit: ((String) -> Unit)? = null
+    onValueCommit: ((String) -> Unit)? = null,
+    height: androidx.compose.ui.unit.Dp = 48.dp
 ) {
     val focusManager = LocalFocusManager.current
     var lastCommittedValue by remember { mutableStateOf(value) }
-    
+
     Column(modifier = modifier) {
         Text(
             text = label,
@@ -256,7 +257,7 @@ fun ParameterTextBox(
             color = if (enabled) Color.White else Color.Gray,
             modifier = Modifier.padding(bottom = 4.dp)
         )
-        
+
         OutlinedTextField(
             value = value,
             onValueChange = { newValue ->
@@ -275,7 +276,7 @@ fun ParameterTextBox(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .height(48.dp)
+                .height(height)
                 .onFocusChanged { focusState: FocusState ->
                     if (!focusState.isFocused && value != lastCommittedValue) {
                         onValueCommit?.invoke(value)
@@ -308,60 +309,44 @@ fun InputChannelSelector(
     selectedInputId: Int,
     maxInputs: Int,
     onInputSelected: (Int) -> Unit,
+    onOpenSelector: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    var showGridOverlay by remember { mutableStateOf(false) }
-    
-    Box(modifier = modifier) {
-        Column(modifier = Modifier.fillMaxWidth()) {
-            Text(
-                text = "Input Channel",
-                fontSize = 14.sp,
-                color = Color.White,
-                modifier = Modifier.padding(bottom = 4.dp)
-            )
-            
-            // Compact selector button
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp)
-                    .background(Color(0xFF2196F3), shape = RoundedCornerShape(4.dp))
-                    .clickable { showGridOverlay = true }
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
+    Column(modifier = modifier) {
+        Text(
+            text = "Input Channel",
+            fontSize = 14.sp,
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        // Compact selector button
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(Color(0xFF2196F3), shape = RoundedCornerShape(4.dp))
+                .clickable { onOpenSelector() }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Row(
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(
-                        text = "Input $selectedInputId",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.White
-                    )
-                    Text(
-                        text = "▼",
-                        fontSize = 14.sp,
-                        color = Color.White
-                    )
-                }
+                Text(
+                    text = "Input $selectedInputId",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = "▼",
+                    fontSize = 14.sp,
+                    color = Color.White
+                )
             }
-        }
-        
-        // Grid overlay dialog
-        if (showGridOverlay) {
-            InputChannelGridOverlay(
-                selectedInputId = selectedInputId,
-                maxInputs = maxInputs,
-                onInputSelected = { inputId ->
-                    onInputSelected(inputId)
-                    showGridOverlay = false
-                },
-                onDismiss = { showGridOverlay = false }
-            )
         }
     }
 }
@@ -370,7 +355,7 @@ fun InputChannelSelector(
  * Grid overlay for selecting input channel
  */
 @Composable
-private fun InputChannelGridOverlay(
+fun InputChannelGridOverlay(
     selectedInputId: Int,
     maxInputs: Int,
     onInputSelected: (Int) -> Unit,
