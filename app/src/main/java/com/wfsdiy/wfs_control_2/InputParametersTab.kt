@@ -1,19 +1,26 @@
 package com.wfsdiy.wfs_control_2
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.launch
 import java.util.Locale
 import kotlin.math.pow
 import kotlin.math.roundToInt
@@ -84,53 +91,106 @@ fun InputParametersTab(
         inputNameValue = inputName.stringValue
     }
 
+    // State for section expansion and references
+    var isDirectivityExpanded by remember { mutableStateOf(false) }
+    var isLiveSourceExpanded by remember { mutableStateOf(false) }
+    var isFloorReflectionsExpanded by remember { mutableStateOf(false) }
+    var isJitterExpanded by remember { mutableStateOf(false) }
+    var isLFOExpanded by remember { mutableStateOf(false) }
+
+    val coroutineScope = rememberCoroutineScope()
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(spacing.padding)
         ) {
-            // Fixed header with Input Channel selector and Input Name
-            Row(
+            // Fixed header with Input Channel selector, Input Name, and Section Shortcuts
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(
                         start = screenWidthDp * 0.1f,
                         end = screenWidthDp * 0.1f,
                         bottom = spacing.largeSpacing
-                    ),
-                horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+                    )
             ) {
-                // Input Channel Selector
-                InputChannelSelector(
-                    selectedInputId = inputParametersState.selectedInputId,
-                    maxInputs = numberOfInputs,
-                    onInputSelected = { inputId ->
-                        viewModel.setSelectedInput(inputId)
-                        viewModel.requestInputParameters(inputId)
-                    },
-                    onOpenSelector = { showGridOverlay = true },
-                    modifier = Modifier.weight(1f)
-                )
+                // First row: Input Channel selector (30%) and Input Name (60%)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
+                ) {
+                    // Input Channel Selector - 30%
+                    InputChannelSelector(
+                        selectedInputId = inputParametersState.selectedInputId,
+                        maxInputs = numberOfInputs,
+                        onInputSelected = { inputId ->
+                            viewModel.setSelectedInput(inputId)
+                            viewModel.requestInputParameters(inputId)
+                        },
+                        onOpenSelector = { showGridOverlay = true },
+                        modifier = Modifier.weight(0.3f)
+                    )
 
-                // Input Name
-                ParameterTextBox(
-                    label = "Input Name",
-                    value = inputNameValue,
-                    onValueChange = { newValue ->
-                        inputNameValue = newValue
-                    },
-                    onValueCommit = { committedValue ->
-                        selectedChannel.setParameter("inputName", InputParameterValue(
-                            normalizedValue = 0f,
-                            stringValue = committedValue,
-                            displayValue = committedValue
-                        ))
-                        viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
-                    },
-                    height = 56.dp,
-                    modifier = Modifier.weight(1f)
-                )
+                    // Input Name - 60%
+                    ParameterTextBox(
+                        label = "Input Name",
+                        value = inputNameValue,
+                        onValueChange = { newValue ->
+                            inputNameValue = newValue
+                        },
+                        onValueCommit = { committedValue ->
+                            selectedChannel.setParameter("inputName", InputParameterValue(
+                                normalizedValue = 0f,
+                                stringValue = committedValue,
+                                displayValue = committedValue
+                            ))
+                            viewModel.sendInputParameterString("/remoteInput/inputName", inputId, committedValue)
+                        },
+                        height = 56.dp,
+                        modifier = Modifier.weight(0.6f)
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(spacing.smallSpacing))
+
+                // Second row: Section shortcut buttons
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    SectionShortcutButton(
+                        text = "Dir",
+                        isExpanded = isDirectivityExpanded,
+                        onClick = { isDirectivityExpanded = !isDirectivityExpanded },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SectionShortcutButton(
+                        text = "Live",
+                        isExpanded = isLiveSourceExpanded,
+                        onClick = { isLiveSourceExpanded = !isLiveSourceExpanded },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SectionShortcutButton(
+                        text = "Floor",
+                        isExpanded = isFloorReflectionsExpanded,
+                        onClick = { isFloorReflectionsExpanded = !isFloorReflectionsExpanded },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SectionShortcutButton(
+                        text = "Jitter",
+                        isExpanded = isJitterExpanded,
+                        onClick = { isJitterExpanded = !isJitterExpanded },
+                        modifier = Modifier.weight(1f)
+                    )
+                    SectionShortcutButton(
+                        text = "LFO",
+                        isExpanded = isLFOExpanded,
+                        onClick = { isLFOExpanded = !isLFOExpanded },
+                        modifier = Modifier.weight(1f)
+                    )
+                }
             }
 
             // Scrollable content
@@ -164,9 +224,13 @@ fun InputParametersTab(
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
             spacing = spacing,
-            screenWidthDp = screenWidthDp
+            screenWidthDp = screenWidthDp,
+            isExpanded = isDirectivityExpanded,
+            onExpandedChange = { isDirectivityExpanded = it },
+            scrollState = scrollState,
+            coroutineScope = coroutineScope
         )
-        
+
         // Live Source Attenuation Group (now has its own collapsible header)
         RenderLiveSourceSection(
             selectedChannel = selectedChannel,
@@ -176,9 +240,13 @@ fun InputParametersTab(
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
             spacing = spacing,
-            screenWidthDp = screenWidthDp
+            screenWidthDp = screenWidthDp,
+            isExpanded = isLiveSourceExpanded,
+            onExpandedChange = { isLiveSourceExpanded = it },
+            scrollState = scrollState,
+            coroutineScope = coroutineScope
         )
-        
+
         // Floor Reflections Group (now has its own collapsible header)
         RenderFloorReflectionsSection(
             selectedChannel = selectedChannel,
@@ -188,9 +256,13 @@ fun InputParametersTab(
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
             spacing = spacing,
-            screenWidthDp = screenWidthDp
+            screenWidthDp = screenWidthDp,
+            isExpanded = isFloorReflectionsExpanded,
+            onExpandedChange = { isFloorReflectionsExpanded = it },
+            scrollState = scrollState,
+            coroutineScope = coroutineScope
         )
-        
+
         // Jitter Group (now has its own collapsible header)
         RenderJitterSection(
             selectedChannel = selectedChannel,
@@ -198,7 +270,11 @@ fun InputParametersTab(
             horizontalSliderWidth = horizontalSliderWidth,
             horizontalSliderHeight = horizontalSliderHeight,
             spacing = spacing,
-            screenWidthDp = screenWidthDp
+            screenWidthDp = screenWidthDp,
+            isExpanded = isJitterExpanded,
+            onExpandedChange = { isJitterExpanded = it },
+            scrollState = scrollState,
+            coroutineScope = coroutineScope
         )
         
         // LFO Group (now has its own collapsible header)
@@ -210,7 +286,11 @@ fun InputParametersTab(
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
             spacing = spacing,
-            screenWidthDp = screenWidthDp
+            screenWidthDp = screenWidthDp,
+            isExpanded = isLFOExpanded,
+            onExpandedChange = { isLFOExpanded = it },
+            scrollState = scrollState,
+            coroutineScope = coroutineScope
         )
             }
         }
@@ -1026,10 +1106,26 @@ private fun RenderDirectivitySection(
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing,
-    screenWidthDp: androidx.compose.ui.unit.Dp
+    screenWidthDp: androidx.compose.ui.unit.Dp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    // Track the position of this section
+    var sectionYPosition by remember { mutableStateOf(0f) }
+
+    // Scroll to this section when expanded
+    LaunchedEffect(isExpanded) {
+        if (isExpanded && sectionYPosition > 0) {
+            coroutineScope.launch {
+                scrollState.animateScrollTo(sectionYPosition.toInt())
+            }
+        }
+    }
 
     // Directivity (Width Expansion Slider - grows from center)
     val directivity = selectedChannel.getParameter("directivity")
@@ -1080,7 +1176,10 @@ private fun RenderDirectivitySection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }
+            .clickable { onExpandedChange(!isExpanded) }
+            .onGloballyPositioned { coordinates ->
+                sectionYPosition = coordinates.positionInParent().y
+            }
             .padding(
                 start = screenWidthDp * 0.1f,
                 end = screenWidthDp * 0.1f,
@@ -1290,10 +1389,24 @@ private fun RenderLiveSourceSection(
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing,
-    screenWidthDp: androidx.compose.ui.unit.Dp
+    screenWidthDp: androidx.compose.ui.unit.Dp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    var sectionYPosition by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isExpanded) {
+        if (isExpanded && sectionYPosition > 0) {
+            coroutineScope.launch {
+                scrollState.animateScrollTo(sectionYPosition.toInt())
+            }
+        }
+    }
 
     // Active
     val liveSourceActive = selectedChannel.getParameter("liveSourceActive")
@@ -1398,7 +1511,10 @@ private fun RenderLiveSourceSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }
+            .clickable { onExpandedChange(!isExpanded) }
+            .onGloballyPositioned { coordinates ->
+                sectionYPosition = coordinates.positionInParent().y
+            }
             .padding(
                 start = screenWidthDp * 0.1f,
                 end = screenWidthDp * 0.1f,
@@ -1763,10 +1879,24 @@ private fun RenderFloorReflectionsSection(
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing,
-    screenWidthDp: androidx.compose.ui.unit.Dp
+    screenWidthDp: androidx.compose.ui.unit.Dp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    var sectionYPosition by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isExpanded) {
+        if (isExpanded && sectionYPosition > 0) {
+            coroutineScope.launch {
+                scrollState.animateScrollTo(sectionYPosition.toInt())
+            }
+        }
+    }
 
     // Active
     val FRactive = selectedChannel.getParameter("FRactive")
@@ -1882,7 +2012,10 @@ private fun RenderFloorReflectionsSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }
+            .clickable { onExpandedChange(!isExpanded) }
+            .onGloballyPositioned { coordinates ->
+                sectionYPosition = coordinates.positionInParent().y
+            }
             .padding(
                 start = screenWidthDp * 0.1f,
                 end = screenWidthDp * 0.1f,
@@ -2274,10 +2407,24 @@ private fun RenderJitterSection(
     horizontalSliderWidth: androidx.compose.ui.unit.Dp,
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing,
-    screenWidthDp: androidx.compose.ui.unit.Dp
+    screenWidthDp: androidx.compose.ui.unit.Dp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    var sectionYPosition by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isExpanded) {
+        if (isExpanded && sectionYPosition > 0) {
+            coroutineScope.launch {
+                scrollState.animateScrollTo(sectionYPosition.toInt())
+            }
+        }
+    }
 
     // Calculate slider width to match Rate X in LFO section
     // LFO row has 10% padding on each side, 3 columns with weight(1), and 5% spacing between columns
@@ -2305,7 +2452,10 @@ private fun RenderJitterSection(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f)
-            .clickable { isExpanded = !isExpanded }
+            .clickable { onExpandedChange(!isExpanded) }
+            .onGloballyPositioned { coordinates ->
+                sectionYPosition = coordinates.positionInParent().y
+            }
             .padding(vertical = 8.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
@@ -2388,10 +2538,24 @@ private fun RenderLFOSection(
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
     spacing: ResponsiveSpacing,
-    screenWidthDp: androidx.compose.ui.unit.Dp
+    screenWidthDp: androidx.compose.ui.unit.Dp,
+    isExpanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    scrollState: androidx.compose.foundation.ScrollState,
+    coroutineScope: kotlinx.coroutines.CoroutineScope
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
+    var sectionYPosition by remember { mutableStateOf(0f) }
+
+    LaunchedEffect(isExpanded) {
+        if (isExpanded && sectionYPosition > 0) {
+            coroutineScope.launch {
+                scrollState.animateScrollTo(sectionYPosition.toInt())
+            }
+        }
+    }
 
     // Active
     val LFOactive = selectedChannel.getParameter("LFOactive")
@@ -2601,7 +2765,10 @@ private fun RenderLFOSection(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable { isExpanded = !isExpanded }
+            .clickable { onExpandedChange(!isExpanded) }
+            .onGloballyPositioned { coordinates ->
+                sectionYPosition = coordinates.positionInParent().y
+            }
             .padding(
                 start = screenWidthDp * 0.1f,
                 end = screenWidthDp * 0.1f,
@@ -3260,6 +3427,34 @@ private data class ResponsiveTextSizes(
     val bodySize: androidx.compose.ui.unit.TextUnit,
     val smallSize: androidx.compose.ui.unit.TextUnit
 )
+
+/**
+ * Section shortcut button for quick access to collapsible sections
+ */
+@Composable
+private fun SectionShortcutButton(
+    text: String,
+    isExpanded: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Button(
+        onClick = onClick,
+        colors = ButtonDefaults.buttonColors(
+            containerColor = if (isExpanded) Color(0xFF00BCD4) else Color(0xFF424242),
+            contentColor = Color.White
+        ),
+        shape = RoundedCornerShape(4.dp),
+        modifier = modifier.height(40.dp),
+        contentPadding = PaddingValues(horizontal = 4.dp, vertical = 4.dp)
+    ) {
+        Text(
+            text = text,
+            fontSize = 12.sp,
+            fontWeight = if (isExpanded) FontWeight.Bold else FontWeight.Normal
+        )
+    }
+}
 
 private data class ResponsiveSpacing(
     val padding: androidx.compose.ui.unit.Dp,
