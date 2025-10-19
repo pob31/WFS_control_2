@@ -117,10 +117,8 @@ fun InputParametersTab(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
             ) {
-        
+
         // Input Group
-        ParameterSectionHeader(title = "Input")
-        
         RenderInputSection(
             selectedChannel = selectedChannel,
             viewModel = viewModel,
@@ -128,7 +126,8 @@ fun InputParametersTab(
             horizontalSliderHeight = horizontalSliderHeight,
             verticalSliderWidth = verticalSliderWidth,
             verticalSliderHeight = verticalSliderHeight,
-            spacing = spacing
+            spacing = spacing,
+            screenWidthDp = screenWidthDp
         )
         
         // Directivity Group (now has its own collapsible header)
@@ -215,7 +214,8 @@ private fun RenderInputSection(
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
     verticalSliderWidth: androidx.compose.ui.unit.Dp,
     verticalSliderHeight: androidx.compose.ui.unit.Dp,
-    spacing: ResponsiveSpacing
+    spacing: ResponsiveSpacing,
+    screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
 
@@ -230,12 +230,49 @@ private fun RenderInputSection(
         val actualValue = InputParameterDefinitions.applyFormula(definition, attenuationValue)
         attenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Box(
-        modifier = Modifier.fillMaxWidth(),
-        contentAlignment = Alignment.Center
+
+    // Delay/Latency
+    val delayLatency = selectedChannel.getParameter("delayLatency")
+    var delayLatencyValue by remember { mutableFloatStateOf(0f) } // -100 to 100 range directly
+    var delayLatencyDisplayValue by remember { mutableStateOf("0.00") }
+
+    LaunchedEffect(inputId, delayLatency.normalizedValue) {
+        val definition = InputParameterDefinitions.parametersByVariableName["delayLatency"]!!
+        val actualValue = InputParameterDefinitions.applyFormula(definition, delayLatency.normalizedValue)
+        delayLatencyValue = actualValue
+        delayLatencyDisplayValue = String.format(Locale.US, "%.2f", actualValue)
+    }
+
+    // Minimal Latency
+    val minimalLatency = selectedChannel.getParameter("minimalLatency")
+    var minLatencyIndex by remember {
+        mutableIntStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1))
+    }
+
+    LaunchedEffect(inputId, minimalLatency.normalizedValue) {
+        minLatencyIndex = minimalLatency.normalizedValue.toInt().coerceIn(0, 1)
+    }
+
+    // Cluster
+    val cluster = selectedChannel.getParameter("cluster")
+    var clusterIndex by remember {
+        mutableIntStateOf(cluster.normalizedValue.roundToInt().coerceIn(0, 10))
+    }
+
+    LaunchedEffect(inputId, cluster.normalizedValue) {
+        clusterIndex = cluster.normalizedValue.roundToInt().coerceIn(0, 10)
+    }
+
+    // Top Row with 10% padding: Attenuation | Delay | Minimal Latency | Cluster
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f),
+        horizontalArrangement = Arrangement.spacedBy(spacing.smallSpacing),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        // Attenuation
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
             Text("Attenuation", fontSize = 12.sp, color = Color.White)
             StandardSlider(
                 value = attenuationValue,
@@ -251,10 +288,10 @@ private fun RenderInputSection(
                     ))
                     viewModel.sendInputParameterFloat("/remoteInput/attenuation", inputId, actualValue)
                 },
-                modifier = Modifier.height(verticalSliderHeight), // Only constrain height, let width adapt to number box
+                modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
                 sliderColor = Color(0xFFFF5722),
                 trackBackgroundColor = Color.DarkGray,
-                orientation = SliderOrientation.VERTICAL,
+                orientation = SliderOrientation.HORIZONTAL,
                 displayedValue = attenuationDisplayValue,
                 isValueEditable = true,
                 onDisplayedValueChange = { /* Typing handled internally */ },
@@ -277,93 +314,91 @@ private fun RenderInputSection(
                 valueTextColor = Color.White
             )
         }
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
-    // Delay/Latency
-    val delayLatency = selectedChannel.getParameter("delayLatency")
-    var delayLatencyValue by remember { mutableFloatStateOf(0f) } // -100 to 100 range directly
-    var delayLatencyDisplayValue by remember { mutableStateOf("0.00") }
 
-    LaunchedEffect(inputId, delayLatency.normalizedValue) {
-        val definition = InputParameterDefinitions.parametersByVariableName["delayLatency"]!!
-        val actualValue = InputParameterDefinitions.applyFormula(definition, delayLatency.normalizedValue)
-        delayLatencyValue = actualValue
-        delayLatencyDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-    }
-    
-    Column {
-        Text("Latency compensation / Delay", fontSize = 12.sp, color = Color.White)
-        BidirectionalSlider(
-            value = delayLatencyValue,
-            onValueChange = { newValue ->
-                delayLatencyValue = newValue
-                delayLatencyDisplayValue = String.format(Locale.US, "%.2f", newValue)
-                val normalized = (newValue + 100f) / 200f
-                selectedChannel.setParameter("delayLatency", InputParameterValue(
-                    normalizedValue = normalized,
-                    stringValue = "",
-                    displayValue = "${String.format(Locale.US, "%.2f", newValue)}ms"
-                ))
-                viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, newValue)
-            },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
-            sliderColor = Color(0xFF4CAF50),
-            trackBackgroundColor = Color.DarkGray,
-            orientation = SliderOrientation.HORIZONTAL,
-            valueRange = -100f..100f,
-            displayedValue = delayLatencyDisplayValue,
-            isValueEditable = true,
-            onDisplayedValueChange = { /* Typing handled internally */ },
-            onValueCommit = { committedValue ->
-                committedValue.toFloatOrNull()?.let { value ->
-                    val coercedValue = value.coerceIn(-100f, 100f)
-                    delayLatencyValue = coercedValue
-                    delayLatencyDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                    val normalized = (coercedValue + 100f) / 200f
+        // Delay/Latency
+        Column(modifier = Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("Latency compensation / Delay", fontSize = 12.sp, color = Color.White)
+            BidirectionalSlider(
+                value = delayLatencyValue,
+                onValueChange = { newValue ->
+                    delayLatencyValue = newValue
+                    delayLatencyDisplayValue = String.format(Locale.US, "%.2f", newValue)
+                    val normalized = (newValue + 100f) / 200f
                     selectedChannel.setParameter("delayLatency", InputParameterValue(
                         normalizedValue = normalized,
                         stringValue = "",
-                        displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}ms"
+                        displayValue = "${String.format(Locale.US, "%.2f", newValue)}ms"
                     ))
-                    viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, coercedValue)
-                }
-            },
-            valueUnit = "ms",
-            valueTextColor = Color.White
-        )
-    }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
-    // Minimal Latency
-    val minimalLatency = selectedChannel.getParameter("minimalLatency")
-    var minLatencyIndex by remember {
-        mutableIntStateOf(minimalLatency.normalizedValue.toInt().coerceIn(0, 1))
+                    viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, newValue)
+                },
+                modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+                sliderColor = Color(0xFF4CAF50),
+                trackBackgroundColor = Color.DarkGray,
+                orientation = SliderOrientation.HORIZONTAL,
+                valueRange = -100f..100f,
+                displayedValue = delayLatencyDisplayValue,
+                isValueEditable = true,
+                onDisplayedValueChange = { /* Typing handled internally */ },
+                onValueCommit = { committedValue ->
+                    committedValue.toFloatOrNull()?.let { value ->
+                        val coercedValue = value.coerceIn(-100f, 100f)
+                        delayLatencyValue = coercedValue
+                        delayLatencyDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
+                        val normalized = (coercedValue + 100f) / 200f
+                        selectedChannel.setParameter("delayLatency", InputParameterValue(
+                            normalizedValue = normalized,
+                            stringValue = "",
+                            displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}ms"
+                        ))
+                        viewModel.sendInputParameterFloat("/remoteInput/delayLatency", inputId, coercedValue)
+                    }
+                },
+                valueUnit = "ms",
+                valueTextColor = Color.White
+            )
+        }
+
+        // Minimal Latency
+        Column(modifier = Modifier.weight(1f)) {
+            ParameterTextButton(
+                label = "Minimal Latency",
+                selectedIndex = minLatencyIndex,
+                options = listOf("Acoustic Precedence", "Minimal Latency"),
+                onSelectionChange = { index ->
+                    minLatencyIndex = index
+                    selectedChannel.setParameter("minimalLatency", InputParameterValue(
+                        normalizedValue = index.toFloat(),
+                        stringValue = "",
+                        displayValue = listOf("Acoustic Precedence", "Minimal Latency")[index]
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/minimalLatency", inputId, index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
+
+        // Cluster
+        Column(modifier = Modifier.weight(1f)) {
+            ParameterDropdown(
+                label = "Cluster",
+                selectedIndex = clusterIndex,
+                options = listOf("none", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4", "Cluster 5", "Cluster 6", "Cluster 7", "Cluster 8", "Cluster 9", "Cluster 10"),
+                onSelectionChange = { index ->
+                    clusterIndex = index
+                    val options = listOf("none", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4", "Cluster 5", "Cluster 6", "Cluster 7", "Cluster 8", "Cluster 9", "Cluster 10")
+                    selectedChannel.setParameter("cluster", InputParameterValue(
+                        normalizedValue = index.toFloat(),
+                        stringValue = "",
+                        displayValue = options[index]
+                    ))
+                    viewModel.sendInputParameterInt("/remoteInput/cluster", inputId, index)
+                },
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 
-    LaunchedEffect(inputId, minimalLatency.normalizedValue) {
-        minLatencyIndex = minimalLatency.normalizedValue.toInt().coerceIn(0, 1)
-    }
-    
-    ParameterTextButton(
-        label = "Minimal Latency",
-        selectedIndex = minLatencyIndex,
-        options = listOf("Acoustic Precedence", "Minimal Latency"),
-        onSelectionChange = { index ->
-            minLatencyIndex = index
-            selectedChannel.setParameter("minimalLatency", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = listOf("Acoustic Precedence", "Minimal Latency")[index]
-            ))
-            viewModel.sendInputParameterInt("/remoteInput/minimalLatency", inputId, index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
+    Spacer(modifier = Modifier.height(spacing.largeSpacing))
     
     // Position X, Y, Z with Joystick and Slider controls
     val positionX = selectedChannel.getParameter("positionX")
@@ -549,38 +584,7 @@ private fun RenderInputSection(
             )
         }
     }
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
-    // Cluster
-    val cluster = selectedChannel.getParameter("cluster")
-    var clusterIndex by remember {
-        mutableIntStateOf(cluster.normalizedValue.roundToInt().coerceIn(0, 10))
-    }
 
-    LaunchedEffect(inputId, cluster.normalizedValue) {
-        clusterIndex = cluster.normalizedValue.roundToInt().coerceIn(0, 10)
-    }
-    
-    ParameterDropdown(
-        label = "Cluster",
-        selectedIndex = clusterIndex,
-        options = listOf("none", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4", "Cluster 5", "Cluster 6", "Cluster 7", "Cluster 8", "Cluster 9", "Cluster 10"),
-        onSelectionChange = { index ->
-            clusterIndex = index
-            val options = listOf("none", "Cluster 1", "Cluster 2", "Cluster 3", "Cluster 4", "Cluster 5", "Cluster 6", "Cluster 7", "Cluster 8", "Cluster 9", "Cluster 10")
-            selectedChannel.setParameter("cluster", InputParameterValue(
-                normalizedValue = index.toFloat(),
-                stringValue = "",
-                displayValue = options[index]
-            ))
-            viewModel.sendInputParameterInt("/remoteInput/cluster", inputId, index)
-        },
-        modifier = Modifier.fillMaxWidth()
-    )
-    
-    Spacer(modifier = Modifier.height(spacing.smallSpacing))
-    
     // Max Speed Active
     val maxSpeedActive = selectedChannel.getParameter("maxSpeedActive")
     var maxSpeedActiveIndex by remember {
