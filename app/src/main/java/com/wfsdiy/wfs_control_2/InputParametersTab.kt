@@ -109,10 +109,11 @@ fun InputParametersTab(
             }
 
             // Scrollable content
+            val scrollState = rememberScrollState()
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .verticalScroll(rememberScrollState()),
+                    .verticalScroll(scrollState),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(spacing.smallSpacing)
             ) {
@@ -169,15 +170,14 @@ fun InputParametersTab(
             spacing = spacing
         )
         
-        // Jitter Group
-        ParameterSectionHeader(title = "Jitter")
-        
+        // Jitter Group (now has its own collapsible header)
         RenderJitterSection(
             selectedChannel = selectedChannel,
             viewModel = viewModel,
             horizontalSliderWidth = horizontalSliderWidth,
             horizontalSliderHeight = horizontalSliderHeight,
-            spacing = spacing
+            spacing = spacing,
+            screenWidthDp = screenWidthDp
         )
         
         // LFO Group (now has its own collapsible header)
@@ -2087,10 +2087,19 @@ private fun RenderJitterSection(
     viewModel: MainActivityViewModel,
     horizontalSliderWidth: androidx.compose.ui.unit.Dp,
     horizontalSliderHeight: androidx.compose.ui.unit.Dp,
-    spacing: ResponsiveSpacing
+    spacing: ResponsiveSpacing,
+    screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    
+    var isExpanded by remember { mutableStateOf(false) }
+
+    // Calculate slider width to match Rate X in LFO section
+    // LFO row has 10% padding on each side, 3 columns with weight(1), and 5% spacing between columns
+    // Available width = 80% (after 10% padding on each side)
+    // Column spacing = 10% (two 5% gaps)
+    // Each column width = (80% - 10%) / 3 = 70% / 3 ≈ 23.33%
+    val jitterSliderWidth = screenWidthDp * 0.7f / 3f
+
     // Jitter - Width Expansion Slider
     val jitter = selectedChannel.getParameter("jitter")
     var jitterValue by remember { mutableFloatStateOf(0f) } // 0-1 expansion value
@@ -2104,10 +2113,41 @@ private fun RenderJitterSection(
         jitterValue = if (actualValue > 0) kotlin.math.sqrt(actualValue / 10f) else 0f
         jitterDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
-    
-    Column {
-        Text("Jitter", fontSize = 12.sp, color = Color.White)
-        WidthExpansionSlider(
+
+    // Collapsible header
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f)
+            .clickable { isExpanded = !isExpanded }
+            .padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "Jitter",
+            fontSize = 18.sp,
+            color = Color(0xFF00BCD4),
+            fontWeight = FontWeight.Bold
+        )
+        Text(
+            text = if (isExpanded) "▼" else "▶",
+            fontSize = 16.sp,
+            color = Color(0xFF00BCD4)
+        )
+    }
+
+    if (isExpanded) {
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Column(
+                modifier = Modifier.width(jitterSliderWidth),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text("Jitter", fontSize = 12.sp, color = Color.White)
+                WidthExpansionSlider(
             value = jitterValue,
             onValueChange = { newValue ->
                 jitterValue = newValue
@@ -2123,7 +2163,7 @@ private fun RenderJitterSection(
                 ))
                 viewModel.sendInputParameterFloat("/remoteInput/jitter", inputId, actualValue)
             },
-            modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
+            modifier = Modifier.fillMaxWidth().height(horizontalSliderHeight),
             sliderColor = Color(0xFFFF9800),
             trackBackgroundColor = Color.DarkGray,
             orientation = SliderOrientation.HORIZONTAL,
@@ -2148,6 +2188,8 @@ private fun RenderJitterSection(
             valueUnit = "m",
             valueTextColor = Color.White
         )
+            }
+        }
     }
 }
 
@@ -2163,8 +2205,8 @@ private fun RenderLFOSection(
     screenWidthDp: androidx.compose.ui.unit.Dp
 ) {
     val inputId by rememberUpdatedState(selectedChannel.inputId)
-    var isExpanded by remember { mutableStateOf(true) }
-    
+    var isExpanded by remember { mutableStateOf(false) }
+
     // Active
     val LFOactive = selectedChannel.getParameter("LFOactive")
     var LFOactiveIndex by remember {
