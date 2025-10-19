@@ -423,7 +423,9 @@ private fun RenderInputSection(
     }
     
     Row(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = screenWidthDp * 0.1f, end = screenWidthDp * 0.1f),
         horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         // Left column: Number boxes
