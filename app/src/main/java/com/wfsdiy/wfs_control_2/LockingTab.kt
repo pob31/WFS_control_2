@@ -55,7 +55,7 @@ fun LockingTab(
                 rowMarkers.forEach { marker ->
                     val markerName = marker.name.takeIf { it.isNotBlank() }
                     val buttonText = "Lock ${marker.id}" +
-                            if (markerName != null) "\n${markerName.take(12)}" else ""
+                            if (markerName != null) "\n\n${markerName.take(12)}" else ""
 
                     CustomToggleButton(
                         text = buttonText,
