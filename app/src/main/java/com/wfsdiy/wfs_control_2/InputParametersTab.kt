@@ -2004,13 +2004,13 @@ private fun RenderFloorReflectionsSection(
     val isFREnabled = FRactiveIndex == 0 // 0 = ON, 1 = OFF
 
     // FRattenuation
-    val FRattenuation = selectedChannel.getParameter("FRattentuation")
+    val FRattenuation = selectedChannel.getParameter("FRattenuation")
     var FRattenuationValue by remember { mutableStateOf(FRattenuation.normalizedValue) }
     var FRattenuationDisplayValue by remember { mutableStateOf("0.00") }
 
     LaunchedEffect(inputId, FRattenuation.normalizedValue) {
         FRattenuationValue = FRattenuation.normalizedValue
-        val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
+        val definition = InputParameterDefinitions.parametersByVariableName["FRattenuation"]!!
         val actualValue = InputParameterDefinitions.applyFormula(definition, FRattenuation.normalizedValue)
         FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
     }
@@ -2171,15 +2171,15 @@ private fun RenderFloorReflectionsSection(
                         value = FRattenuationValue,
                         onValueChange = { newValue ->
                             FRattenuationValue = newValue
-                            val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
+                            val definition = InputParameterDefinitions.parametersByVariableName["FRattenuation"]!!
                             val actualValue = InputParameterDefinitions.applyFormula(definition, newValue)
                             FRattenuationDisplayValue = String.format(Locale.US, "%.2f", actualValue)
-                            selectedChannel.setParameter("FRattentuation", InputParameterValue(
+                            selectedChannel.setParameter("FRattenuation", InputParameterValue(
                                 normalizedValue = newValue,
                                 stringValue = "",
                                 displayValue = "${String.format(Locale.US, "%.2f", actualValue)}dB"
                             ))
-                            viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, actualValue)
+                            viewModel.sendInputParameterFloat("/remoteInput/FRattenuation", inputId, actualValue)
                         },
                         modifier = Modifier.width(horizontalSliderWidth).height(horizontalSliderHeight),
                         sliderColor = if (isFREnabled) getRowColor(7) else Color.Gray,
@@ -2190,17 +2190,17 @@ private fun RenderFloorReflectionsSection(
                         onDisplayedValueChange = { /* Typing handled internally */ },
                         onValueCommit = { committedValue ->
                             committedValue.toFloatOrNull()?.let { value ->
-                                val definition = InputParameterDefinitions.parametersByVariableName["FRattentuation"]!!
+                                val definition = InputParameterDefinitions.parametersByVariableName["FRattenuation"]!!
                                 val coercedValue = value.coerceIn(definition.minValue, definition.maxValue)
                                 val normalized = InputParameterDefinitions.reverseFormula(definition, coercedValue)
                                 FRattenuationValue = normalized
                                 FRattenuationDisplayValue = String.format(Locale.US, "%.2f", coercedValue)
-                                selectedChannel.setParameter("FRattentuation", InputParameterValue(
+                                selectedChannel.setParameter("FRattenuation", InputParameterValue(
                                     normalizedValue = normalized,
                                     stringValue = "",
                                     displayValue = "${String.format(Locale.US, "%.2f", coercedValue)}dB"
                                 ))
-                                viewModel.sendInputParameterFloat("/remoteInput/FRattentuation", inputId, coercedValue)
+                                viewModel.sendInputParameterFloat("/remoteInput/FRattenuation", inputId, coercedValue)
                             }
                         },
                         valueUnit = "dB",

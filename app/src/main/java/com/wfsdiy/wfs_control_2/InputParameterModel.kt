@@ -513,8 +513,8 @@ object InputParameterDefinitions {
         InputParameterDefinition(
             group = "Floor Reflections",
             label = "Attenuation",
-            variableName = "FRattentuation",
-            oscPath = "/remoteInput/FRattentuation",
+            variableName = "FRattenuation",
+            oscPath = "/remoteInput/FRattenuation",
             isIncoming = true,
             isOutgoing = true,
             uiType = UIComponentType.V_SLIDER,
