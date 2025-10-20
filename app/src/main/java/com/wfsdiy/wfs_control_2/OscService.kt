@@ -220,7 +220,6 @@ class OscService : Service() {
                         updateInputParameterFromOsc(oscPath, inputId, floatValue = value)
                     },
                     onInputParameterStringReceived = { oscPath, inputId, value ->
-                        android.util.Log.d("OscService", "String OSC received: path=$oscPath, inputId=$inputId, value=$value")
                         inputParameterUpdates.offer(OscInputParameterUpdate(oscPath, inputId, stringValue = value))
                         updateInputParameterFromOsc(oscPath, inputId, stringValue = value)
                     }
@@ -351,13 +350,11 @@ class OscService : Service() {
         updatedChannels[inputId] = updatedChannel
 
         // Force StateFlow emission by creating a completely new state object with incremented revision
-        val newState = InputParametersState(
+        _inputParametersState.value = InputParametersState(
             channels = updatedChannels,
             selectedInputId = currentState.selectedInputId,
             revision = currentState.revision + 1  // Increment to force Compose change detection
         )
-        android.util.Log.d("OscService", "Updating state: revision ${newState.revision}, param=${definition.variableName}, value=$paramValue")
-        _inputParametersState.value = newState
     }
     
     fun startOscServerWithCanvasDimensions(canvasWidth: Float, canvasHeight: Float) {

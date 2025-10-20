@@ -534,7 +534,6 @@ fun parseAndProcessOscPacket(
 
     try {
         val address = parseOscString(buffer)
-        android.util.Log.d("OSCfunctions", "Incoming OSC message: address=$address")
 
         when {
             address == "/inputs" -> {
@@ -731,14 +730,10 @@ fun parseAndProcessOscPacket(
                         if (buffer.remaining() < 4) return
                         val inputId = parseOscInt(buffer)
                         val value = parseOscString(buffer)
-                        android.util.Log.d("OSCfunctions", "Parsed string OSC: address=$address, inputId=$inputId, value=$value")
-                        android.util.Log.d("OSCfunctions", "Callback null? ${onInputParameterStringReceived == null}")
                         onInputParameterStringReceived?.invoke(address, inputId, value)
-                        android.util.Log.d("OSCfunctions", "Callback invoked!")
                     }
                     else -> {
                         // Unknown type tag
-                        android.util.Log.d("OSCfunctions", "Unknown type tag: $typeTags")
                     }
                 }
             }

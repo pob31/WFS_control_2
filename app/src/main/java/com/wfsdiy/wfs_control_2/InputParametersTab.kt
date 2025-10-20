@@ -91,7 +91,6 @@ fun InputParametersTab(
     LaunchedEffect("inputNameCollector") {
         viewModel.inputParametersState.collect { state ->
             val newName = state.getSelectedChannel().getParameter("inputName").stringValue
-            android.util.Log.d("InputParametersTab", "StateFlow collected: revision=${state.revision}, inputName=$newName")
             inputNameValue = newName
         }
     }
