@@ -174,13 +174,15 @@ fun ParameterNumberBox(
     var lastCommittedValue by remember { mutableStateOf(value) }
     
     Column(modifier = modifier) {
-        Text(
-            text = label,
-            fontSize = 12.sp,
-            color = if (enabled) Color.White else Color.Gray,
-            modifier = Modifier.padding(bottom = 4.dp)
-        )
-        
+        if (label.isNotEmpty()) {
+            Text(
+                text = label,
+                fontSize = 12.sp,
+                color = if (enabled) Color.White else Color.Gray,
+                modifier = Modifier.padding(bottom = 4.dp)
+            )
+        }
+
         Row(
             verticalAlignment = Alignment.CenterVertically,
             modifier = Modifier

@@ -1,9 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(dir /s \"C:\\Users\\Pierre-Olivier\\AndroidStudioProjects\\WFS Control\")",
-      "Read(//c/**)",
-      "Bash(ls -la \"C:\\Users\\Pierre-Olivier\\AndroidStudioProjects\\WFS Control\\app\\src\\main\\java\\com\\wfsdiy\\wfs_control_2\"\" | grep -E \".kt$ \")"
+      "Read(//d/downloads/**)"
     ],
     "deny": [],
     "ask": []
