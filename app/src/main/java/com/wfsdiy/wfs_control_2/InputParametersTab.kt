@@ -84,12 +84,21 @@ fun InputParametersTab(
     // State for showing grid overlay
     var showGridOverlay by remember { mutableStateOf(false) }
 
-    // Input Name state
-    val inputName = selectedChannel.getParameter("inputName")
-    var inputNameValue by remember { mutableStateOf(inputName.stringValue) }
+    // Input Name state - manually collect from StateFlow to force updates
+    var inputNameValue by remember { mutableStateOf("") }
 
-    LaunchedEffect(inputId, inputName.stringValue) {
-        inputNameValue = inputName.stringValue
+    // Manually observe the StateFlow to ensure we get updates
+    LaunchedEffect("inputNameCollector") {
+        viewModel.inputParametersState.collect { state ->
+            val newName = state.getSelectedChannel().getParameter("inputName").stringValue
+            android.util.Log.d("InputParametersTab", "StateFlow collected: revision=${state.revision}, inputName=$newName")
+            inputNameValue = newName
+        }
+    }
+
+    // Send inputNumber when tab becomes visible (Issue #2)
+    LaunchedEffect("sendInputNumber") {
+        viewModel.sendInputParameterInt("/remoteInput/inputNumber", inputId, inputId)
     }
 
     // State for section expansion and references

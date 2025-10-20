@@ -220,6 +220,7 @@ class OscService : Service() {
                         updateInputParameterFromOsc(oscPath, inputId, floatValue = value)
                     },
                     onInputParameterStringReceived = { oscPath, inputId, value ->
+                        android.util.Log.d("OscService", "String OSC received: path=$oscPath, inputId=$inputId, value=$value")
                         inputParameterUpdates.offer(OscInputParameterUpdate(oscPath, inputId, stringValue = value))
                         updateInputParameterFromOsc(oscPath, inputId, stringValue = value)
                     }
@@ -349,11 +350,14 @@ class OscService : Service() {
         val updatedChannels = currentState.channels.toMutableMap()
         updatedChannels[inputId] = updatedChannel
 
-        // Force StateFlow emission by creating a completely new state object
-        _inputParametersState.value = InputParametersState(
+        // Force StateFlow emission by creating a completely new state object with incremented revision
+        val newState = InputParametersState(
             channels = updatedChannels,
-            selectedInputId = currentState.selectedInputId
+            selectedInputId = currentState.selectedInputId,
+            revision = currentState.revision + 1  // Increment to force Compose change detection
         )
+        android.util.Log.d("OscService", "Updating state: revision ${newState.revision}, param=${definition.variableName}, value=$paramValue")
+        _inputParametersState.value = newState
     }
     
     fun startOscServerWithCanvasDimensions(canvasWidth: Float, canvasHeight: Float) {
@@ -459,7 +463,10 @@ class OscService : Service() {
     
     fun setSelectedInput(inputId: Int) {
         val currentState = _inputParametersState.value
-        _inputParametersState.value = currentState.copy(selectedInputId = inputId)
+        _inputParametersState.value = currentState.copy(
+            selectedInputId = inputId,
+            revision = currentState.revision + 1
+        )
     }
 
     override fun onDestroy() {

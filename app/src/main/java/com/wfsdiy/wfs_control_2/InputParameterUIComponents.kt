@@ -172,7 +172,7 @@ fun ParameterNumberBox(
 ) {
     val focusManager = LocalFocusManager.current
     var lastCommittedValue by remember { mutableStateOf(value) }
-    
+
     Column(modifier = modifier) {
         if (label.isNotEmpty()) {
             Text(

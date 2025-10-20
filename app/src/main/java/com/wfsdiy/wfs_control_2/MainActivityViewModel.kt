@@ -41,7 +41,7 @@ class MainActivityViewModel(private val oscService: OscService) : ViewModel() {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 64)
     
     val inputParametersState: StateFlow<InputParametersState> = oscService.inputParametersState
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), InputParametersState())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, InputParametersState())
 
     fun sendMarkerPosition(markerId: Int, x: Float, y: Float, isCluster: Boolean) {
         oscService.sendMarkerPosition(markerId, x, y, isCluster)

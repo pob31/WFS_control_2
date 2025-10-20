@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Read(//d/downloads/**)"
+      "Read(//d/downloads/**)",
+      "Bash(find . -name \"*.kt\" -type f -exec grep -l \"remoteInput\" {} ;)"
     ],
     "deny": [],
     "ask": []

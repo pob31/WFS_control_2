@@ -82,7 +82,8 @@ data class InputChannelState(
  */
 data class InputParametersState(
     val channels: MutableMap<Int, InputChannelState> = mutableMapOf(),
-    val selectedInputId: Int = 1  // Currently selected input channel (1-64)
+    val selectedInputId: Int = 1,  // Currently selected input channel (1-64)
+    val revision: Long = 0  // Incremented on each update to force Compose change detection
 ) {
     fun getChannel(inputId: Int): InputChannelState {
         return channels.getOrPut(inputId) { InputChannelState(inputId) }
