@@ -25,6 +25,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
@@ -375,6 +376,7 @@ fun InputChannelSelector(
 fun InputChannelGridOverlay(
     selectedInputId: Int,
     maxInputs: Int,
+    inputParametersState: InputParametersState,
     onInputSelected: (Int) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -453,12 +455,31 @@ fun InputChannelGridOverlay(
                             .clickable { onInputSelected(inputId) },
                         contentAlignment = Alignment.Center
                     ) {
-                        Text(
-                            text = "$inputId",
-                            fontSize = 18.sp,
-                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                            color = Color.White
-                        )
+                        // Get the input name for this input
+                        val inputName = inputParametersState.getChannel(inputId)
+                            .getParameter("inputName").stringValue
+
+                        Column(
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center
+                        ) {
+                            Text(
+                                text = "$inputId",
+                                fontSize = 18.sp,
+                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                color = Color.White
+                            )
+                            if (inputName.isNotEmpty()) {
+                                Text(
+                                    text = inputName,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.White.copy(alpha = 0.8f),
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
                 }
             }

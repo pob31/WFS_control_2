@@ -342,6 +342,7 @@ fun InputParametersTab(
             InputChannelGridOverlay(
                 selectedInputId = inputParametersState.selectedInputId,
                 maxInputs = numberOfInputs,
+                inputParametersState = inputParametersState,
                 onInputSelected = { inputId ->
                     viewModel.setSelectedInput(inputId)
                     viewModel.requestInputParameters(inputId)
