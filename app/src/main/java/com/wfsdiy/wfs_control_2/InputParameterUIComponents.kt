@@ -465,18 +465,20 @@ fun InputChannelGridOverlay(
                         ) {
                             Text(
                                 text = "$inputId",
-                                fontSize = 18.sp,
+                                fontSize = 36.sp,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
                                 color = Color.White
                             )
                             if (inputName.isNotEmpty()) {
                                 Text(
                                     text = inputName,
-                                    fontSize = 10.sp,
+                                    fontSize = 20.sp,
                                     fontWeight = FontWeight.Normal,
                                     color = Color.White.copy(alpha = 0.8f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    maxLines = 2,
+                                    overflow = TextOverflow.Ellipsis,
+                                    textAlign = TextAlign.Center,
+                                    lineHeight = 18.sp
                                 )
                             }
                         }

@@ -60,9 +60,11 @@ fun LockingTab(
                     CustomToggleButton(
                         text = buttonText,
                         isOn = marker.isLocked,
-                        onColor = Color(0xFFE0A0A0),
+                        onColor = Color.Black,
                         offColor = Color.DarkGray,
                         borderColor = getMarkerColor(marker.id, isClusterMarker = false),
+                        onTextColor = Color.Red,
+                        offTextColor = Color.White,
                         onClick = { onLockChanged(marker) },
                         modifier = Modifier
                             .weight(1f)

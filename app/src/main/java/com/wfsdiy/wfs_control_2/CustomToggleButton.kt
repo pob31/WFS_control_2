@@ -26,10 +26,12 @@ fun CustomToggleButton(
     offColor: Color,
     borderColor: Color,
     onClick: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onTextColor: Color = Color.White,
+    offTextColor: Color = Color.White
 ) {
     val mainContentBackgroundColor = if (isOn) onColor else offColor
-    val textColor = Color.White
+    val textColor = if (isOn) onTextColor else offTextColor
     val outerShape = RoundedCornerShape(8.dp)
     val innerCornerRadius = 3.dp
 

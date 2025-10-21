@@ -60,8 +60,10 @@ fun VisibilityTab(
                     CustomToggleButton(
                         text = buttonText,
                         isOn = marker.isVisible,
-                        onColor = Color(0xFF6A94A8),
-                        offColor = Color.DarkGray,
+                        onColor = Color.DarkGray,
+                        offColor = Color.Black,
+                        onTextColor = Color.White,
+                        offTextColor = Color(0xFF2196F3),
                         borderColor = getMarkerColor(marker.id, isClusterMarker = false),
                         onClick = { onViewChanged(marker) },
                         modifier = Modifier
