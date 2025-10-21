@@ -63,7 +63,7 @@ enum class SecondaryTouchMode(val modeNumber: Int, val displayName: String) {
     ATTENUATION_DELAY(0, "Attenuation / Delay-Latency compensation"),
     DISTANCE_ATTENUATION_COMMON(1, "Distance attenuation / Common attenuation"),
     DISTANCE_RATIO_COMMON(2, "Distance ratio / Common attenuation"),
-    ORIENTATION_TILT(3, "Orientation / Tilt"),
+    ORIENTATION_TILT(3, "Rotation / Tilt"),
     DIRECTIVITY_HF_SHELF(4, "Directivity / HF shelf"),
     LIVE_SOURCE_RADIUS_FIXED(5, "Live source Radius / Fixed attenuation"),
     LIVE_SOURCE_FAST_COMPRESSOR(6, "Live source Fast compressor Ratio / Threshold"),
