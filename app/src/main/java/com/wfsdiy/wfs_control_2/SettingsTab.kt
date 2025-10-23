@@ -36,7 +36,11 @@ fun SettingsTab(
     secondaryTouchMode: SecondaryTouchMode = SecondaryTouchMode.ATTENUATION_DELAY,
     onSecondaryTouchModeChanged: (SecondaryTouchMode) -> Unit = {},
     clusterSecondaryTouchEnabled: Boolean = true,
-    onClusterSecondaryTouchEnabledChanged: (Boolean) -> Unit = {}
+    onClusterSecondaryTouchEnabledChanged: (Boolean) -> Unit = {},
+    clusterSecondaryAngularEnabled: Boolean = true,
+    onClusterSecondaryAngularEnabledChanged: (Boolean) -> Unit = {},
+    clusterSecondaryRadialEnabled: Boolean = true,
+    onClusterSecondaryRadialEnabledChanged: (Boolean) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showResetDialog by remember { mutableStateOf(false) }
@@ -103,16 +107,16 @@ fun SettingsTab(
         )
         
         Row(
-            modifier = Modifier.fillMaxWidth(0.8f),
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            modifier = Modifier.fillMaxWidth(0.95f),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             var expanded by remember { mutableStateOf(false) }
-            
+
             ExposedDropdownMenuBox(
                 expanded = expanded,
                 onExpandedChange = { expanded = !expanded },
-                modifier = Modifier.weight(1f)
+                modifier = Modifier.width(280.dp)
             ) {
                 OutlinedTextField(
                     value = secondaryTouchMode.displayName,
@@ -131,9 +135,9 @@ fun SettingsTab(
                         focusedBorderColor = Color.White,
                         unfocusedBorderColor = Color.LightGray
                     ),
-                    textStyle = TextStyle(color = Color.White, fontSize = 16.sp)
+                    textStyle = TextStyle(color = Color.White, fontSize = 14.sp)
                 )
-                
+
                 ExposedDropdownMenu(
                     expanded = expanded,
                     onDismissRequest = { expanded = false },
@@ -141,12 +145,12 @@ fun SettingsTab(
                 ) {
                     SecondaryTouchMode.entries.forEach { mode ->
                         DropdownMenuItem(
-                            text = { 
+                            text = {
                                 Text(
                                     mode.displayName,
                                     color = Color.White,
-                                    fontSize = 14.sp
-                                ) 
+                                    fontSize = 13.sp
+                                )
                             },
                             onClick = {
                                 onSecondaryTouchModeChanged(mode)
@@ -156,21 +160,52 @@ fun SettingsTab(
                     }
                 }
             }
-            
-            // Cluster Secondary Touch Enable/Disable Button
-            Button(
-                onClick = { onClusterSecondaryTouchEnabledChanged(!clusterSecondaryTouchEnabled) },
-                colors = androidx.compose.material3.ButtonDefaults.buttonColors(
-                    containerColor = if (clusterSecondaryTouchEnabled) Color(0xFF2E7D32) else Color.Red,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier.width(120.dp)
+
+            // Cluster Map Secondary Touch Buttons
+            Column(
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.weight(1f)
             ) {
                 Text(
-                    if (clusterSecondaryTouchEnabled) "Cluster Enabled" else "Cluster Disabled",
-                    fontSize = 16.sp,
-                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    "Cluster Map Controls",
+                    style = MaterialTheme.typography.bodyMedium.copy(color = Color.White, fontWeight = FontWeight.Bold),
+                    modifier = Modifier.padding(bottom = 4.dp)
                 )
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    // Angular Control Button
+                    Button(
+                        onClick = { onClusterSecondaryAngularEnabledChanged(!clusterSecondaryAngularEnabled) },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = if (clusterSecondaryAngularEnabled) Color(0xFF2E7D32) else Color.Red,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            if (clusterSecondaryAngularEnabled) "Angular ON" else "Angular OFF",
+                            fontSize = 14.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+
+                    // Radial Control Button
+                    Button(
+                        onClick = { onClusterSecondaryRadialEnabledChanged(!clusterSecondaryRadialEnabled) },
+                        colors = androidx.compose.material3.ButtonDefaults.buttonColors(
+                            containerColor = if (clusterSecondaryRadialEnabled) Color(0xFF2E7D32) else Color.Red,
+                            contentColor = Color.White
+                        ),
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text(
+                            if (clusterSecondaryRadialEnabled) "Radial ON" else "Radial OFF",
+                            fontSize = 14.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
+                    }
+                }
             }
         }
 

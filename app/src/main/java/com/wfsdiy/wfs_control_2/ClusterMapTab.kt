@@ -49,6 +49,8 @@ fun ClusterMapTab(
     stageOriginX: Float,
     stageOriginY: Float,
     clusterSecondaryTouchEnabled: Boolean = true,
+    clusterSecondaryAngularEnabled: Boolean = true,
+    clusterSecondaryRadialEnabled: Boolean = true,
     viewModel: MainActivityViewModel? = null
 ) {
     val context = LocalContext.current
@@ -97,9 +99,9 @@ fun ClusterMapTab(
         }
     }
     
-    // Clear vector controls when cluster secondary touch is disabled
-    LaunchedEffect(clusterSecondaryTouchEnabled) {
-        if (!clusterSecondaryTouchEnabled) {
+    // Clear vector controls when cluster secondary touch is disabled or both angular and radial are disabled
+    LaunchedEffect(clusterSecondaryTouchEnabled, clusterSecondaryAngularEnabled, clusterSecondaryRadialEnabled) {
+        if (!clusterSecondaryTouchEnabled || (!clusterSecondaryAngularEnabled && !clusterSecondaryRadialEnabled)) {
             vectorControls.clear()
             vectorControlsUpdateTrigger++
         }
@@ -232,9 +234,13 @@ fun ClusterMapTab(
                                                     val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                     val currentDistance = calculateDistance(currentMarker.position, change.position)
                                                     val distanceRatio = if (initialDistance > 0f) currentDistance / initialDistance else 1.0f
-                                                    
-                                                    sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
-                                                    sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+
+                                                    if (clusterSecondaryAngularEnabled) {
+                                                        sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
+                                                    }
+                                                    if (clusterSecondaryRadialEnabled) {
+                                                        sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+                                                    }
                                                 }
                                             }
                                             change.consume()
@@ -268,8 +274,8 @@ fun ClusterMapTab(
                                                 }
                                             }
                                         } else {
-                                            // No marker in pickup range - check for vector control only if cluster secondary touch is enabled
-                                            if (clusterSecondaryTouchEnabled) {
+                                            // No marker in pickup range - check for vector control only if cluster secondary touch is enabled and at least one function is enabled
+                                            if (clusterSecondaryTouchEnabled && (clusterSecondaryAngularEnabled || clusterSecondaryRadialEnabled)) {
                                                 val draggedMarkers = draggingMarkers.values.toSet()
                                                 val markersWithVectorControl = vectorControls.values.map { it.markerId }.toSet()
                                                 val availableMarkers = draggedMarkers - markersWithVectorControl
@@ -294,8 +300,12 @@ fun ClusterMapTab(
                                                             
                                                             // Send initial OSC messages for secondary touch asynchronously
                                                             CoroutineScope(Dispatchers.IO).launch {
-                                                                sendOscClusterRotation(context, markerId, 0.0f)
-                                                                sendOscClusterScale(context, markerId, 1.0f)
+                                                                if (clusterSecondaryAngularEnabled) {
+                                                                    sendOscClusterRotation(context, markerId, 0.0f)
+                                                                }
+                                                                if (clusterSecondaryRadialEnabled) {
+                                                                    sendOscClusterScale(context, markerId, 1.0f)
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -351,13 +361,17 @@ fun ClusterMapTab(
                                                                 val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                                 val currentAngle = calculateAngle(updatedMarker.position, vectorControl.currentTouchPosition)
                                                                 val angleChange = currentAngle - initialAngle
-                                                                
+
                                                                 val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                                 val currentDistance = calculateDistance(updatedMarker.position, vectorControl.currentTouchPosition)
                                                                 val distanceRatio = if (initialDistance > 0f) currentDistance / initialDistance else 1.0f
-                                                                
-                                                                sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
-                                                                sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+
+                                                                if (clusterSecondaryAngularEnabled) {
+                                                                    sendOscClusterRotation(context, vectorControl.markerId, (angleChange + 360f) % 360f)
+                                                                }
+                                                                if (clusterSecondaryRadialEnabled) {
+                                                                    sendOscClusterScale(context, vectorControl.markerId, distanceRatio)
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -414,9 +428,9 @@ fun ClusterMapTab(
             drawStageCoordinates(stageWidth, stageDepth, canvasWidth, canvasHeight, markerRadius)
             drawStageCornerLabels(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
             drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
-            
-            // Draw vector control lines only if cluster secondary touch is enabled
-            if (clusterSecondaryTouchEnabled) {
+
+            // Draw vector control lines only if cluster secondary touch is enabled and at least one function is enabled
+            if (clusterSecondaryTouchEnabled && (clusterSecondaryAngularEnabled || clusterSecondaryRadialEnabled)) {
                 vectorControls.values.forEach { vectorControl ->
                     val currentMarker = currentMarkersState.find { it.id == vectorControl.markerId }
                     if (currentMarker != null) {

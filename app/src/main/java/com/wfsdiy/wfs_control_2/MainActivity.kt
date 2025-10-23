@@ -54,6 +54,8 @@ internal const val KEY_LOCK_STATES = "lock_states"
 internal const val KEY_VISIBILITY_STATES = "visibility_states"
 internal const val KEY_SECONDARY_TOUCH_MODE = "secondary_touch_mode"
 internal const val KEY_CLUSTER_SECONDARY_TOUCH_ENABLED = "cluster_secondary_touch_enabled"
+internal const val KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED = "cluster_secondary_angular_enabled"
+internal const val KEY_CLUSTER_SECONDARY_RADIAL_ENABLED = "cluster_secondary_radial_enabled"
 
 // Maximum number of inputs the system can handle
 internal const val MAX_INPUTS = 64
@@ -195,6 +197,32 @@ fun loadClusterSecondaryTouchEnabled(context: Context): Boolean {
     return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_TOUCH_ENABLED, true) // Default to enabled
 }
 
+fun saveClusterSecondaryAngularEnabled(context: Context, enabled: Boolean) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putBoolean(KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED, enabled)
+        apply()
+    }
+}
+
+fun loadClusterSecondaryAngularEnabled(context: Context): Boolean {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED, true) // Default to enabled
+}
+
+fun saveClusterSecondaryRadialEnabled(context: Context, enabled: Boolean) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putBoolean(KEY_CLUSTER_SECONDARY_RADIAL_ENABLED, enabled)
+        apply()
+    }
+}
+
+fun loadClusterSecondaryRadialEnabled(context: Context): Boolean {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_RADIAL_ENABLED, true) // Default to enabled
+}
+
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -294,7 +322,9 @@ fun WFSControlApp() {
     var numberOfInputs by rememberSaveable { mutableStateOf(MAX_INPUTS) }
     var secondaryTouchMode by rememberSaveable { mutableStateOf(SecondaryTouchMode.ATTENUATION_DELAY) }
     var clusterSecondaryTouchEnabled by rememberSaveable { mutableStateOf(true) }
-    
+    var clusterSecondaryAngularEnabled by rememberSaveable { mutableStateOf(true) }
+    var clusterSecondaryRadialEnabled by rememberSaveable { mutableStateOf(true) }
+
     // Screen dimensions for OSC operations
     var screenWidthPx by remember { mutableFloatStateOf(0f) }
     var screenHeightPx by remember { mutableFloatStateOf(0f) }
@@ -435,6 +465,8 @@ fun WFSControlApp() {
         numberOfInputs = loadedInputs
         secondaryTouchMode = loadSecondaryTouchMode(context)
         clusterSecondaryTouchEnabled = loadClusterSecondaryTouchEnabled(context)
+        clusterSecondaryAngularEnabled = loadClusterSecondaryAngularEnabled(context)
+        clusterSecondaryRadialEnabled = loadClusterSecondaryRadialEnabled(context)
         markers = markers.mapIndexed { index, marker ->
             marker.copy(
                 isLocked = loadedLockStates.getOrElse(index) { false },
@@ -698,6 +730,8 @@ fun WFSControlApp() {
                 stageOriginX = stageOriginX,
                 stageOriginY = stageOriginY,
                 clusterSecondaryTouchEnabled = clusterSecondaryTouchEnabled,
+                clusterSecondaryAngularEnabled = clusterSecondaryAngularEnabled,
+                clusterSecondaryRadialEnabled = clusterSecondaryRadialEnabled,
                 viewModel = viewModel
                 )
                 5 -> ClusterHeightTab(
@@ -734,6 +768,16 @@ fun WFSControlApp() {
                 onClusterSecondaryTouchEnabledChanged = { enabled ->
                     clusterSecondaryTouchEnabled = enabled
                     saveClusterSecondaryTouchEnabled(context, enabled)
+                },
+                clusterSecondaryAngularEnabled = clusterSecondaryAngularEnabled,
+                onClusterSecondaryAngularEnabledChanged = { enabled ->
+                    clusterSecondaryAngularEnabled = enabled
+                    saveClusterSecondaryAngularEnabled(context, enabled)
+                },
+                clusterSecondaryRadialEnabled = clusterSecondaryRadialEnabled,
+                onClusterSecondaryRadialEnabledChanged = { enabled ->
+                    clusterSecondaryRadialEnabled = enabled
+                    saveClusterSecondaryRadialEnabled(context, enabled)
                 }
             )
         }
