@@ -56,6 +56,8 @@ internal const val KEY_SECONDARY_TOUCH_MODE = "secondary_touch_mode"
 internal const val KEY_CLUSTER_SECONDARY_TOUCH_ENABLED = "cluster_secondary_touch_enabled"
 internal const val KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED = "cluster_secondary_angular_enabled"
 internal const val KEY_CLUSTER_SECONDARY_RADIAL_ENABLED = "cluster_secondary_radial_enabled"
+internal const val KEY_INPUT_SECONDARY_ANGULAR_MODE = "input_secondary_angular_mode"
+internal const val KEY_INPUT_SECONDARY_RADIAL_MODE = "input_secondary_radial_mode"
 
 // Maximum number of inputs the system can handle
 internal const val MAX_INPUTS = 64
@@ -74,6 +76,42 @@ enum class SecondaryTouchMode(val modeNumber: Int, val displayName: String) {
     LFO_PHASE_PERIOD(9, "LFO Phase / Period"),
     LFO_X_RATE_AMPLITUDE(10, "LFO X Rate / Amplitude"),
     LFO_Y_RATE_AMPLITUDE(11, "LFO Y Rate / Amplitude")
+}
+
+enum class SecondaryTouchFunction(val modeNumber: Int, val displayName: String) {
+    OFF(-1, "OFF"),
+    ATTENUATION(0, "Attenuation"),
+    LATENCY_COMPENSATION(1, "Latency Compensation / Delay"),
+    HEIGHT(2, "Height"),
+    MAX_SPEED(3, "Max Speed"),
+    HEIGHT_FACTOR(4, "Height Factor"),
+    DISTANCE_ATTENUATION(5, "Distance Attenuation"),
+    DISTANCE_RATIO(6, "Distance Ratio"),
+    COMMON_ATTENUATION(7, "Common Attenuation"),
+    ROTATION(8, "Rotation"),
+    TILT(9, "Tilt"),
+    DIRECTIVITY(10, "Directivity"),
+    HF_SHELF(11, "HF Shelf"),
+    LIVE_SOURCE_FIXED_RADIUS(12, "Live Source Fixed Radius"),
+    LIVE_SOURCE_ATTENUATION(13, "Live Source Attenuation"),
+    LIVE_SOURCE_PEAK_COMPRESSION_THRESHOLD(14, "Live Source Peak Compression Threshold"),
+    LIVE_SOURCE_PEAK_COMPRESSION_RATIO(15, "Live Source Peak Compression Ratio"),
+    LIVE_SOURCE_SLOW_COMPRESSION_THRESHOLD(16, "Live Source Slow Compression Threshold"),
+    LIVE_SOURCE_SLOW_COMPRESSION_RATIO(17, "Live Source Slow Compression Ratio"),
+    FLOOR_REFLECTIONS_ATTENUATION(18, "Floor Reflections Attenuation"),
+    FLOOR_REFLECTIONS_DIFFUSION(19, "Floor Reflections Diffusion"),
+    JITTER(20, "Jitter"),
+    LFO_PERIOD(21, "LFO Period"),
+    LFO_PHASE(22, "LFO Phase"),
+    LFO_RATE_X(23, "LFO Rate X"),
+    LFO_AMPLITUDE_X(24, "LFO Amplitude X"),
+    LFO_PHASE_X(25, "LFO Phase X"),
+    LFO_RATE_Y(26, "LFO Rate Y"),
+    LFO_AMPLITUDE_Y(27, "LFO Amplitude Y"),
+    LFO_PHASE_Y(28, "LFO Phase Y"),
+    LFO_RATE_Z(29, "LFO Rate Z"),
+    LFO_AMPLITUDE_Z(30, "LFO Amplitude Z"),
+    LFO_PHASE_Z(31, "LFO Phase Z")
 }
 
 // Define the Marker data class
@@ -207,7 +245,7 @@ fun saveClusterSecondaryAngularEnabled(context: Context, enabled: Boolean) {
 
 fun loadClusterSecondaryAngularEnabled(context: Context): Boolean {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED, true) // Default to enabled
+    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_ANGULAR_ENABLED, false) // Default to OFF
 }
 
 fun saveClusterSecondaryRadialEnabled(context: Context, enabled: Boolean) {
@@ -220,7 +258,35 @@ fun saveClusterSecondaryRadialEnabled(context: Context, enabled: Boolean) {
 
 fun loadClusterSecondaryRadialEnabled(context: Context): Boolean {
     val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_RADIAL_ENABLED, true) // Default to enabled
+    return sharedPrefs.getBoolean(KEY_CLUSTER_SECONDARY_RADIAL_ENABLED, false) // Default to OFF
+}
+
+fun saveInputSecondaryAngularMode(context: Context, mode: SecondaryTouchFunction) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putInt(KEY_INPUT_SECONDARY_ANGULAR_MODE, mode.modeNumber)
+        apply()
+    }
+}
+
+fun loadInputSecondaryAngularMode(context: Context): SecondaryTouchFunction {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val modeNumber = sharedPrefs.getInt(KEY_INPUT_SECONDARY_ANGULAR_MODE, -1) // Default to OFF
+    return SecondaryTouchFunction.entries.find { it.modeNumber == modeNumber } ?: SecondaryTouchFunction.OFF
+}
+
+fun saveInputSecondaryRadialMode(context: Context, mode: SecondaryTouchFunction) {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    with(sharedPrefs.edit()) {
+        putInt(KEY_INPUT_SECONDARY_RADIAL_MODE, mode.modeNumber)
+        apply()
+    }
+}
+
+fun loadInputSecondaryRadialMode(context: Context): SecondaryTouchFunction {
+    val sharedPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+    val modeNumber = sharedPrefs.getInt(KEY_INPUT_SECONDARY_RADIAL_MODE, -1) // Default to OFF
+    return SecondaryTouchFunction.entries.find { it.modeNumber == modeNumber } ?: SecondaryTouchFunction.OFF
 }
 
 class MainActivity : ComponentActivity() {
@@ -322,8 +388,10 @@ fun WFSControlApp() {
     var numberOfInputs by rememberSaveable { mutableStateOf(MAX_INPUTS) }
     var secondaryTouchMode by rememberSaveable { mutableStateOf(SecondaryTouchMode.ATTENUATION_DELAY) }
     var clusterSecondaryTouchEnabled by rememberSaveable { mutableStateOf(true) }
-    var clusterSecondaryAngularEnabled by rememberSaveable { mutableStateOf(true) }
-    var clusterSecondaryRadialEnabled by rememberSaveable { mutableStateOf(true) }
+    var clusterSecondaryAngularEnabled by rememberSaveable { mutableStateOf(false) }
+    var clusterSecondaryRadialEnabled by rememberSaveable { mutableStateOf(false) }
+    var inputSecondaryAngularMode by rememberSaveable { mutableStateOf(SecondaryTouchFunction.OFF) }
+    var inputSecondaryRadialMode by rememberSaveable { mutableStateOf(SecondaryTouchFunction.OFF) }
 
     // Screen dimensions for OSC operations
     var screenWidthPx by remember { mutableFloatStateOf(0f) }
@@ -467,6 +535,8 @@ fun WFSControlApp() {
         clusterSecondaryTouchEnabled = loadClusterSecondaryTouchEnabled(context)
         clusterSecondaryAngularEnabled = loadClusterSecondaryAngularEnabled(context)
         clusterSecondaryRadialEnabled = loadClusterSecondaryRadialEnabled(context)
+        inputSecondaryAngularMode = loadInputSecondaryAngularMode(context)
+        inputSecondaryRadialMode = loadInputSecondaryRadialMode(context)
         markers = markers.mapIndexed { index, marker ->
             marker.copy(
                 isLocked = loadedLockStates.getOrElse(index) { false },
@@ -675,7 +745,8 @@ fun WFSControlApp() {
                 stageDepth = stageDepth,
                 stageOriginX = stageOriginX,
                 stageOriginY = stageOriginY,
-                secondaryTouchMode = secondaryTouchMode
+                inputSecondaryAngularMode = inputSecondaryAngularMode,
+                inputSecondaryRadialMode = inputSecondaryRadialMode
                 )
                 1 -> LockingTab(
                     numberOfInputs = numberOfInputs,
@@ -759,15 +830,15 @@ fun WFSControlApp() {
                     // Update service network parameters when settings change
                     oscService?.updateNetworkParameters()
                 },
-                secondaryTouchMode = secondaryTouchMode,
-                onSecondaryTouchModeChanged = { newMode ->
-                    secondaryTouchMode = newMode
-                    saveSecondaryTouchMode(context, newMode)
+                inputSecondaryAngularMode = inputSecondaryAngularMode,
+                onInputSecondaryAngularModeChanged = { mode ->
+                    inputSecondaryAngularMode = mode
+                    saveInputSecondaryAngularMode(context, mode)
                 },
-                clusterSecondaryTouchEnabled = clusterSecondaryTouchEnabled,
-                onClusterSecondaryTouchEnabledChanged = { enabled ->
-                    clusterSecondaryTouchEnabled = enabled
-                    saveClusterSecondaryTouchEnabled(context, enabled)
+                inputSecondaryRadialMode = inputSecondaryRadialMode,
+                onInputSecondaryRadialModeChanged = { mode ->
+                    inputSecondaryRadialMode = mode
+                    saveInputSecondaryRadialMode(context, mode)
                 },
                 clusterSecondaryAngularEnabled = clusterSecondaryAngularEnabled,
                 onClusterSecondaryAngularEnabledChanged = { enabled ->

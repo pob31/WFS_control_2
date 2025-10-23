@@ -131,7 +131,8 @@ fun InputMapTab(
     stageDepth: Float,
     stageOriginX: Float,
     stageOriginY: Float,
-    secondaryTouchMode: SecondaryTouchMode = SecondaryTouchMode.ATTENUATION_DELAY
+    inputSecondaryAngularMode: SecondaryTouchFunction = SecondaryTouchFunction.OFF,
+    inputSecondaryRadialMode: SecondaryTouchFunction = SecondaryTouchFunction.OFF
 ) {
     val context = LocalContext.current
     val draggingMarkers = remember { mutableStateMapOf<Long, Int>() }
@@ -183,9 +184,9 @@ fun InputMapTab(
         }
     }
     
-    // Clear vector controls when secondary touch mode is disabled
-    LaunchedEffect(secondaryTouchMode) {
-        if (secondaryTouchMode == SecondaryTouchMode.DISABLED) {
+    // Clear vector controls when both secondary touch functions are OFF
+    LaunchedEffect(inputSecondaryAngularMode, inputSecondaryRadialMode) {
+        if (inputSecondaryAngularMode == SecondaryTouchFunction.OFF && inputSecondaryRadialMode == SecondaryTouchFunction.OFF) {
             vectorControls.clear()
             vectorControlsUpdateTrigger++
         }
@@ -281,8 +282,8 @@ fun InputMapTab(
                                             vectorControls[pointerValue] = updatedVectorControl
                                             vectorControlsUpdateTrigger++ // Trigger recomposition
                                             
-                                            // Calculate and send OSC messages asynchronously only if not disabled
-                                            if (initialLayoutDone && secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+                                            // Calculate and send OSC messages asynchronously only if at least one function is enabled
+                                            if (initialLayoutDone && (inputSecondaryAngularMode != SecondaryTouchFunction.OFF || inputSecondaryRadialMode != SecondaryTouchFunction.OFF)) {
                                                 CoroutineScope(Dispatchers.IO).launch {
                                                     // Use local position if available, otherwise use global position
                                                     val currentMarkerPosition = if (localMarkerPositions.containsKey(vectorControl.markerId)) {
@@ -290,18 +291,22 @@ fun InputMapTab(
                                                     } else {
                                                         currentMarkersState.find { it.id == vectorControl.markerId }?.position
                                                     }
-                                                    
+
                                                     if (currentMarkerPosition != null) {
                                                         val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                         val currentAngle = calculateAngle(currentMarkerPosition, change.position)
                                                         val angleChange = currentAngle - initialAngle
-                                                        
+
                                                         val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                         val currentDistance = calculateDistance(currentMarkerPosition, change.position)
                                                         val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
-                                                        
-                                                        sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
-                                                        sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
+
+                                                        if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF) {
+                                                            sendOscMarkerAngleChange(context, vectorControl.markerId, inputSecondaryAngularMode.modeNumber, angleChange)
+                                                        }
+                                                        if (inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
+                                                            sendOscMarkerRadialChange(context, vectorControl.markerId, inputSecondaryRadialMode.modeNumber, distanceChange)
+                                                        }
                                                     }
                                                 }
                                             }
@@ -335,8 +340,8 @@ fun InputMapTab(
                                                 }
                                             }
                                         } else {
-                                            // No marker in pickup range - check for vector control only if secondary touch is not disabled
-                                            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+                                            // No marker in pickup range - check for vector control only if at least one function is enabled
+                                            if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF || inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
                                                 val draggedMarkers = draggingMarkers.values.toSet()
                                                 val markersWithVectorControl = vectorControls.values.map { it.markerId }.toSet()
                                                 val availableMarkers = draggedMarkers - markersWithVectorControl
@@ -361,8 +366,12 @@ fun InputMapTab(
                                                             
                                                             // Send initial OSC messages for secondary touch asynchronously
                                                             CoroutineScope(Dispatchers.IO).launch {
-                                                                sendOscMarkerAngleChange(context, markerId, secondaryTouchMode.modeNumber, 0f)
-                                                                sendOscMarkerRadialChange(context, markerId, secondaryTouchMode.modeNumber, 0.0f)
+                                                                if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF) {
+                                                                    sendOscMarkerAngleChange(context, markerId, inputSecondaryAngularMode.modeNumber, 0f)
+                                                                }
+                                                                if (inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
+                                                                    sendOscMarkerRadialChange(context, markerId, inputSecondaryRadialMode.modeNumber, 0.0f)
+                                                                }
                                                             }
                                                         }
                                                     }
@@ -409,24 +418,28 @@ fun InputMapTab(
                                                     if (initialLayoutDone) {
                                                         CoroutineScope(Dispatchers.IO).launch {
                                                             sendOscPosition(context, updatedMarker.id, updatedMarker.position.x, updatedMarker.position.y, false)
-                                                            
-                                                            // Check if this marker has vector control and send orientation/directivity OSC only if not disabled
-                                                            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+
+                                                            // Check if this marker has vector control and send OSC only if at least one function is enabled
+                                                            if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF || inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
                                                                 vectorControls.values.forEach { vectorControl ->
                                                                     if (vectorControl.markerId == updatedMarker.id) {
                                                                         // Use local position for consistent calculations
                                                                         val currentMarkerPosition = localMarkerPositions[updatedMarker.id] ?: updatedMarker.position
-                                                                        
+
                                                                         val initialAngle = calculateAngle(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                                         val currentAngle = calculateAngle(currentMarkerPosition, vectorControl.currentTouchPosition)
                                                                         val angleChange = currentAngle - initialAngle
-                                                                        
+
                                                                         val initialDistance = calculateDistance(vectorControl.initialMarkerPosition, vectorControl.initialTouchPosition)
                                                                         val currentDistance = calculateDistance(currentMarkerPosition, vectorControl.currentTouchPosition)
                                                                         val distanceChange = calculateRelativeDistanceChange(initialDistance, currentDistance)
-                                                                        
-                                                                        sendOscMarkerAngleChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, angleChange)
-                                                                        sendOscMarkerRadialChange(context, vectorControl.markerId, secondaryTouchMode.modeNumber, distanceChange)
+
+                                                                        if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF) {
+                                                                            sendOscMarkerAngleChange(context, vectorControl.markerId, inputSecondaryAngularMode.modeNumber, angleChange)
+                                                                        }
+                                                                        if (inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
+                                                                            sendOscMarkerRadialChange(context, vectorControl.markerId, inputSecondaryRadialMode.modeNumber, distanceChange)
+                                                                        }
                                                                     }
                                                                 }
                                                             }
@@ -475,21 +488,21 @@ fun InputMapTab(
         ) { // DrawScope
             drawRect(Color.Black) // Background for the canvas
             
-            // Draw secondary touch mode name above the grid
-            val labelText = "Secondary touch functions (angular / radial): "
-            val modeText = secondaryTouchMode.displayName
-            val fullText = "$labelText\n\n\n$modeText"
-            
+            // Draw secondary touch function names above the grid
+            val angularText = "Angular: ${inputSecondaryAngularMode.displayName}"
+            val radialText = "Radial: ${inputSecondaryRadialMode.displayName}"
+            val fullText = "Secondary Touch Functions\n$angularText | $radialText"
+
             val textPaint = Paint().apply {
                 color = android.graphics.Color.WHITE
-                textSize = 24f
+                textSize = 20f
                 textAlign = Paint.Align.CENTER
                 typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
             }
             drawContext.canvas.nativeCanvas.drawText(
                 fullText,
                 canvasWidth / 2f,
-                50f, // Position above the grid
+                40f, // Position above the grid
                 textPaint
             )
             
@@ -502,8 +515,8 @@ fun InputMapTab(
             // Draw origin marker at position where displayed coordinates would be (0.0, 0.0)
             drawOriginMarker(stageWidth, stageDepth, stageOriginX, stageOriginY, canvasWidth, canvasHeight, markerRadius)
 
-            // Draw vector control lines only if secondary touch is not disabled
-            if (secondaryTouchMode != SecondaryTouchMode.DISABLED) {
+            // Draw vector control lines only if at least one function is enabled
+            if (inputSecondaryAngularMode != SecondaryTouchFunction.OFF || inputSecondaryRadialMode != SecondaryTouchFunction.OFF) {
                 vectorControls.values.forEach { vectorControl ->
                     // Use local position if available, otherwise use global position
                     val currentMarkerPosition = if (localMarkerPositions.containsKey(vectorControl.markerId)) {

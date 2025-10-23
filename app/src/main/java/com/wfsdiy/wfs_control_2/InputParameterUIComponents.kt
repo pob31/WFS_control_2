@@ -521,3 +521,179 @@ fun ParameterSectionHeader(
     }
 }
 
+/**
+ * Mode selector button for selecting secondary touch function modes
+ */
+@Composable
+fun ModeSelectorButton(
+    label: String,
+    selectedMode: SecondaryTouchFunction,
+    onOpenSelector: () -> Unit,
+    modifier: Modifier = Modifier,
+    baseColor: Color? = null // Optional custom color
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = label,
+            fontSize = 14.sp,
+            fontWeight = FontWeight.Bold,
+            color = Color.White,
+            modifier = Modifier.padding(bottom = 4.dp)
+        )
+
+        // Use provided color or default to cluster marker 1 color
+        val saturatedColor = baseColor ?: run {
+            val hue = (1 * 360f / 10) % 360f
+            Color.hsl(hue, 0.85f, 0.7f)
+        }
+        val buttonColor = if (selectedMode == SecondaryTouchFunction.OFF) {
+            saturatedColor.copy(alpha = 0.3f) // Dimmer when OFF
+        } else {
+            saturatedColor.copy(alpha = 0.75f) // Brighter when active
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp)
+                .background(buttonColor, shape = RoundedCornerShape(4.dp))
+                .clickable { onOpenSelector() }
+                .padding(horizontal = 16.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = selectedMode.displayName,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.White,
+                textAlign = TextAlign.Center,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+/**
+ * Grid overlay for selecting secondary touch function mode with mutual exclusion
+ */
+@Composable
+fun ModeGridOverlay(
+    title: String, // Title to display (e.g., "Angular Change Function" or "Radial Change Function")
+    selectedMode: SecondaryTouchFunction,
+    excludedMode: SecondaryTouchFunction?, // Mode selected by the other control (Angular/Radial)
+    onModeSelected: (SecondaryTouchFunction) -> Unit,
+    onDismiss: () -> Unit,
+    baseColor: Color? = null // Optional custom color for the tiles
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.Black.copy(alpha = 0.8f))
+            .clickable { onDismiss() },
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.9f)
+                .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(16.dp))
+                .padding(16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            // Header
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = title,
+                    fontSize = 22.sp,
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .size(48.dp)
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("✕", fontSize = 28.sp, color = Color.White)
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Grid of modes
+            LazyVerticalGrid(
+                columns = GridCells.Fixed(4),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f),
+                contentPadding = PaddingValues(4.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                items(count = SecondaryTouchFunction.entries.size) { index ->
+                    val mode = SecondaryTouchFunction.entries[index]
+                    val isSelected = mode == selectedMode
+                    val isExcluded = excludedMode != null && mode == excludedMode && mode != SecondaryTouchFunction.OFF
+
+                    // Use provided color or default to cluster marker 1 color
+                    val saturatedColor = baseColor ?: run {
+                        val hue = (1 * 360f / 10) % 360f
+                        Color.hsl(hue, 0.85f, 0.7f)
+                    }
+                    val backgroundColor = when {
+                        isExcluded -> Color.DarkGray.copy(alpha = 0.3f) // Grayed out if excluded
+                        isSelected -> saturatedColor // Full color if selected
+                        else -> saturatedColor.copy(alpha = 0.5f) // Half opacity if not selected
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(65.dp)
+                            .background(
+                                backgroundColor,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable(enabled = !isExcluded) {
+                                if (!isExcluded) {
+                                    onModeSelected(mode)
+                                }
+                            }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = mode.displayName,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = if (isExcluded) Color.Gray else Color.White,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Footer info
+            if (excludedMode != null && excludedMode != SecondaryTouchFunction.OFF) {
+                Text(
+                    text = "\"${excludedMode.displayName}\" unavailable (selected by other control)",
+                    fontSize = 12.sp,
+                    color = Color.Yellow,
+                    textAlign = TextAlign.Center
+                )
+            }
+        }
+    }
+}
+

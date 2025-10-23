@@ -12,9 +12,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -203,6 +205,12 @@ fun NetworkTab(
 
         Spacer(modifier = Modifier.height(16.dp))
 
+        // Calculate Input Map marker 23 color for the button
+        val networkButtonColor = run {
+            val hue = (23 * 360f / 32) % 360f
+            Color.hsl(hue, 0.9f, 0.6f)
+        }
+
         Button(
             onClick = {
                 val isIncomingPortValid = isValidPort(incomingPort)
@@ -221,7 +229,12 @@ fun NetworkTab(
                     Toast.makeText(context, "Please correct the errors in the network fields", Toast.LENGTH_LONG).show()
                 }
             },
-            modifier = Modifier.fillMaxWidth(0.8f)
+            modifier = Modifier.fillMaxWidth(0.8f),
+            colors = ButtonDefaults.buttonColors(
+                containerColor = networkButtonColor,
+                contentColor = Color.White
+            ),
+            shape = RoundedCornerShape(4.dp)
         ) {
             Text("Apply Network Settings")
         }
