@@ -6,6 +6,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -596,7 +597,7 @@ fun ModeGridOverlay(
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
-                .fillMaxHeight(0.9f)
+                .fillMaxHeight(0.96f)
                 .background(Color(0xFF1E1E1E), shape = RoundedCornerShape(16.dp))
                 .padding(16.dp),
             horizontalAlignment = Alignment.CenterHorizontally
@@ -636,8 +637,48 @@ fun ModeGridOverlay(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                items(count = SecondaryTouchFunction.entries.size) { index ->
-                    val mode = SecondaryTouchFunction.entries[index]
+                // First add OFF on its own line spanning all columns
+                item(span = { GridItemSpan(4) }) {
+                    val mode = SecondaryTouchFunction.OFF
+                    val isSelected = mode == selectedMode
+                    val isExcluded = false // OFF is never excluded
+
+                    // Use provided color or default to cluster marker 1 color
+                    val saturatedColor = baseColor ?: run {
+                        val hue = (1 * 360f / 10) % 360f
+                        Color.hsl(hue, 0.85f, 0.7f)
+                    }
+                    val backgroundColor = if (isSelected) saturatedColor else saturatedColor.copy(alpha = 0.5f)
+
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(65.dp)
+                            .background(
+                                backgroundColor,
+                                shape = RoundedCornerShape(8.dp)
+                            )
+                            .clickable { onModeSelected(mode) }
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = mode.displayName,
+                            fontSize = 14.sp,
+                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                            color = Color.White,
+                            textAlign = TextAlign.Center,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                            lineHeight = 16.sp
+                        )
+                    }
+                }
+
+                // Then add the rest of the modes in the grid (excluding OFF)
+                items(count = SecondaryTouchFunction.entries.size - 1) { index ->
+                    // Skip the first entry (OFF) since we already added it
+                    val mode = SecondaryTouchFunction.entries[index + 1]
                     val isSelected = mode == selectedMode
                     val isExcluded = excludedMode != null && mode == excludedMode && mode != SecondaryTouchFunction.OFF
 
