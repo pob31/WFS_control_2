@@ -39,6 +39,17 @@ fun Float.toBytesBigEndian(): ByteArray {
 }
 
 fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, isCluster: Boolean = false) {
+    val throttleKey = OscThrottleManager.markerPositionKey(markerId, isCluster)
+
+    // Check if we should send based on throttle
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        // Store this as a pending send
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscPosition(context, markerId, x, y, isCluster)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -68,6 +79,14 @@ fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, isClust
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, address, outgoingPort)
                 socket.send(packet)
             }
+
+            // After successful send, check if there's a pending update
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                // Schedule the pending update to run after the minimum interval
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -75,6 +94,15 @@ fun sendOscPosition(context: Context, markerId: Int, x: Float, y: Float, isClust
 }
 
 fun sendOscClusterZ(context: Context, ClusterId: Int, normalizedZ: Float) {
+    val throttleKey = OscThrottleManager.clusterZKey(ClusterId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscClusterZ(context, ClusterId, normalizedZ)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -101,6 +129,12 @@ fun sendOscClusterZ(context: Context, ClusterId: Int, normalizedZ: Float) {
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, address, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -108,6 +142,15 @@ fun sendOscClusterZ(context: Context, ClusterId: Int, normalizedZ: Float) {
 }
 
 fun sendOscArrayAdjustCommand(context: Context, oscAddress: String, arrayId: Int, value: Float) {
+    val throttleKey = OscThrottleManager.arrayAdjustKey(oscAddress, arrayId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscArrayAdjustCommand(context, oscAddress, arrayId, value)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -133,6 +176,12 @@ fun sendOscArrayAdjustCommand(context: Context, oscAddress: String, arrayId: Int
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -141,6 +190,15 @@ fun sendOscArrayAdjustCommand(context: Context, oscAddress: String, arrayId: Int
 
 fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
     android.util.Log.d("OSC", "sendOscMarkerOrientation called: markerId=$markerId, angle=$angle")
+    val throttleKey = OscThrottleManager.markerOrientationKey(markerId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscMarkerOrientation(context, markerId, angle)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -167,6 +225,12 @@ fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -175,6 +239,15 @@ fun sendOscMarkerOrientation(context: Context, markerId: Int, angle: Int) {
 
 fun sendOscMarkerDirectivity(context: Context, markerId: Int, directivity: Float) {
     android.util.Log.d("OSC", "sendOscMarkerDirectivity called: markerId=$markerId, directivity=$directivity")
+    val throttleKey = OscThrottleManager.markerDirectivityKey(markerId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscMarkerDirectivity(context, markerId, directivity)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -201,6 +274,12 @@ fun sendOscMarkerDirectivity(context: Context, markerId: Int, directivity: Float
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -208,6 +287,15 @@ fun sendOscMarkerDirectivity(context: Context, markerId: Int, directivity: Float
 }
 
 fun sendOscClusterRotation(context: Context, clusterId: Int, angle: Float) {
+    val throttleKey = OscThrottleManager.clusterRotationKey(clusterId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscClusterRotation(context, clusterId, angle)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -234,6 +322,12 @@ fun sendOscClusterRotation(context: Context, clusterId: Int, angle: Float) {
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -241,6 +335,15 @@ fun sendOscClusterRotation(context: Context, clusterId: Int, angle: Float) {
 }
 
 fun sendOscClusterScale(context: Context, clusterId: Int, factor: Float) {
+    val throttleKey = OscThrottleManager.clusterScaleKey(clusterId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscClusterScale(context, clusterId, factor)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -267,6 +370,12 @@ fun sendOscClusterScale(context: Context, clusterId: Int, factor: Float) {
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -275,6 +384,15 @@ fun sendOscClusterScale(context: Context, clusterId: Int, factor: Float) {
 
 fun sendOscMarkerAngleChange(context: Context, markerId: Int, modeNumber: Int, angleChange: Float) {
     android.util.Log.d("OSC", "sendOscMarkerAngleChange called: markerId=$markerId, modeNumber=$modeNumber, angleChange=$angleChange")
+    val throttleKey = OscThrottleManager.markerAngleChangeKey(markerId, modeNumber)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscMarkerAngleChange(context, markerId, modeNumber, angleChange)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -302,6 +420,12 @@ fun sendOscMarkerAngleChange(context: Context, markerId: Int, modeNumber: Int, a
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -310,6 +434,15 @@ fun sendOscMarkerAngleChange(context: Context, markerId: Int, modeNumber: Int, a
 
 fun sendOscMarkerRadialChange(context: Context, markerId: Int, modeNumber: Int, radialChange: Float) {
     android.util.Log.d("OSC", "sendOscMarkerRadialChange called: markerId=$markerId, modeNumber=$modeNumber, radialChange=$radialChange")
+    val throttleKey = OscThrottleManager.markerRadialChangeKey(markerId, modeNumber)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscMarkerRadialChange(context, markerId, modeNumber, radialChange)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -337,6 +470,12 @@ fun sendOscMarkerRadialChange(context: Context, markerId: Int, modeNumber: Int, 
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -348,6 +487,15 @@ fun sendOscMarkerRadialChange(context: Context, markerId: Int, modeNumber: Int, 
  * All parameters send inputId first, then the value
  */
 fun sendOscInputParameterInt(context: Context, oscPath: String, inputId: Int, value: Int) {
+    val throttleKey = OscThrottleManager.inputParameterKey(oscPath, inputId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscInputParameterInt(context, oscPath, inputId, value)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -373,6 +521,12 @@ fun sendOscInputParameterInt(context: Context, oscPath: String, inputId: Int, va
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -380,6 +534,15 @@ fun sendOscInputParameterInt(context: Context, oscPath: String, inputId: Int, va
 }
 
 fun sendOscInputParameterFloat(context: Context, oscPath: String, inputId: Int, value: Float) {
+    val throttleKey = OscThrottleManager.inputParameterKey(oscPath, inputId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscInputParameterFloat(context, oscPath, inputId, value)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -405,6 +568,12 @@ fun sendOscInputParameterFloat(context: Context, oscPath: String, inputId: Int, 
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -412,6 +581,15 @@ fun sendOscInputParameterFloat(context: Context, oscPath: String, inputId: Int, 
 }
 
 fun sendOscInputParameterString(context: Context, oscPath: String, inputId: Int, value: String) {
+    val throttleKey = OscThrottleManager.inputParameterKey(oscPath, inputId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscInputParameterString(context, oscPath, inputId, value)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -437,6 +615,12 @@ fun sendOscInputParameterString(context: Context, oscPath: String, inputId: Int,
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
             }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
+            }
         } catch (e: Exception) {
             e.printStackTrace()
         }
@@ -448,6 +632,15 @@ fun sendOscInputParameterString(context: Context, oscPath: String, inputId: Int,
  * Sends only the inputId (outgoing only)
  */
 fun sendOscRequestInputParameters(context: Context, inputId: Int) {
+    val throttleKey = OscThrottleManager.requestInputParametersKey(inputId)
+
+    if (!OscThrottleManager.shouldSend(throttleKey)) {
+        OscThrottleManager.storePending(throttleKey) {
+            sendOscRequestInputParameters(context, inputId)
+        }
+        return
+    }
+
     CoroutineScope(Dispatchers.IO).launch {
         try {
             val (_, outgoingPortStr, ipAddressStr) = loadNetworkParameters(context)
@@ -472,6 +665,12 @@ fun sendOscRequestInputParameters(context: Context, inputId: Int) {
                 val inetAddress = InetAddress.getByName(ipAddressStr)
                 val packet = DatagramPacket(oscPacketBytes, oscPacketBytes.size, inetAddress, outgoingPort)
                 socket.send(packet)
+            }
+
+            val pendingAction = OscThrottleManager.getPendingAndClear(throttleKey)
+            if (pendingAction != null) {
+                kotlinx.coroutines.delay(20)
+                pendingAction()
             }
         } catch (e: Exception) {
             e.printStackTrace()
